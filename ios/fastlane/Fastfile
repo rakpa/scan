@@ -1,0 +1,67 @@
+# fastlane release lane for the Flutter app on CI.
+# Creates/downloads a real Apple Distribution cert (cert) + App Store profile (sigh)
+# via the App Store Connect API key, then builds the Runner workspace with MANUAL
+# signing. Avoids xcodebuild cloud signing, which fails in CI.
+
+default_platform(:ios)
+
+APP_ID = ENV["BUNDLE_ID"] || "com.rakpa.scanly"
+
+platform :ios do
+  desc "Build and export a signed App Store IPA"
+  lane :release do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["API_KEY_PATH"]
+    )
+
+    keychain_name = "ci-signing"
+    keychain_password = "ci-signing-pass"
+    keychain_db = File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+    delete_keychain(name: keychain_name) if File.exist?(keychain_db)
+    create_keychain(
+      name: keychain_name, password: keychain_password,
+      default_keychain: true, unlock: true, timeout: 3600, lock_when_sleeps: false
+    )
+
+    # Apple Distribution certificate → keychain.
+    # If this errors "maximum number of certificates", revoke old Apple
+    # Distribution certs at developer.apple.com, or switch to `match`.
+    cert(api_key: api_key, keychain_path: keychain_db, keychain_password: keychain_password)
+
+    # App Store provisioning profile for the bundle id.
+    sigh(api_key: api_key, app_identifier: APP_ID, platform: "ios")
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+
+    # Force MANUAL signing on the Runner project.
+    update_code_signing_settings(
+      path: "Runner.xcodeproj",
+      use_automatic_signing: false,
+      team_id: ENV["TEAM_ID"],
+      bundle_identifier: APP_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile_name,
+      targets: ["Runner"]
+    )
+
+    build_app(
+      workspace: "Runner.xcworkspace",   # Flutter uses CocoaPods → build the workspace
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "../build/ipa",
+      output_name: "Scanly.ipa",
+      export_options: {
+        signingStyle: "manual",
+        teamID: ENV["TEAM_ID"],
+        provisioningProfiles: { APP_ID => profile_name }
+      }
+    )
+
+    if ENV["UPLOAD_TESTFLIGHT"] == "true"
+      upload_to_testflight(api_key: api_key, ipa: "../build/ipa/Scanly.ipa",
+                           skip_waiting_for_build_processing: true)
+    end
+  end
+end

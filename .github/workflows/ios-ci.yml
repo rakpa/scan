@@ -1,0 +1,56 @@
+# Flutter iOS simulator build + screenshot. No Apple account / signing needed —
+# a fast "it compiles and launches on iOS" gate.
+name: iOS CI (Simulator)
+
+on:
+  push:
+    branches: [main, ios-app]
+  workflow_dispatch: {}
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      BUNDLE_ID: com.rakpa.scanly
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencies + codegen
+        run: |
+          flutter --version
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build for the simulator (unsigned)
+        run: flutter build ios --debug --simulator
+
+      - name: Boot simulator, install & screenshot
+        run: |
+          set -eo pipefail
+          UDID=$(xcrun simctl list devices available -j \
+            | jq -r '.devices | to_entries[] | .value[] | select(.name|test("iPhone")) | .udid' | head -1)
+          xcrun simctl boot "$UDID"; xcrun simctl bootstatus "$UDID" -b
+          APP="build/ios/iphonesimulator/Runner.app"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" "$BUNDLE_ID" || true
+          sleep 12
+          mkdir -p artifacts
+          xcrun simctl io "$UDID" screenshot artifacts/screenshot.png
+
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-screenshot
+          path: artifacts/*.png

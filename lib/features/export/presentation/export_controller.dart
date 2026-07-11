@@ -1,0 +1,46 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../documents/domain/entities.dart';
+import '../../documents/presentation/documents_providers.dart';
+import '../data/pdf_export_service.dart';
+
+final pdfExportServiceProvider = Provider<PdfExportService>((ref) {
+  return PdfExportService();
+});
+
+/// Handles "export to PDF and share" for a document. Exposes async state so the
+/// detail screen can show progress / errors.
+class ExportController extends AutoDisposeAsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  /// Builds a PDF for [document] and opens the system share sheet.
+  Future<void> exportAndShare(ScanDocument document) async {
+    state = const AsyncLoading();
+    try {
+      final pages =
+          await ref.read(documentRepositoryProvider).getPages(document.id);
+      if (pages.isEmpty) {
+        throw StateError('This document has no pages to export.');
+      }
+      final file = await ref
+          .read(pdfExportServiceProvider)
+          .buildPdf(document: document, pages: pages);
+
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'application/pdf')],
+        subject: document.title,
+      );
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+    }
+  }
+}
+
+final exportControllerProvider =
+    AutoDisposeAsyncNotifierProvider<ExportController, void>(
+        ExportController.new);

@@ -1,0 +1,56 @@
+name: doc_scanner
+description: "A cross-platform document scanner app (Android-first, iOS-ready)."
+publish_to: "none"
+
+# Bump the build number on each store release; rename freely once branding is decided.
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- State management & navigation ---
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+
+  # --- Local persistence (Drift/SQLite) ---
+  drift: ^2.21.0
+  sqlite3_flutter_libs: ^0.5.26
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # --- Scanning / capture ---
+  # ML Kit Document Scanner (Android, requires Google Play Services) + VisionKit (iOS 13+).
+  cunning_document_scanner: ^1.2.3
+
+  # --- Image filters / enhancement (runs in a background isolate) ---
+  image: ^4.3.0
+
+  # --- PDF generation & sharing ---
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  share_plus: ^10.1.2
+
+  # --- Design system / UI ---
+  google_fonts: ^6.2.1        # Plus Jakarta Sans
+  flutter_animate: ^4.5.0     # declarative micro-interactions
+  shared_preferences: ^2.3.2  # onboarding-seen flag
+
+  # --- Utilities ---
+  uuid: ^4.5.1
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Codegen for Drift. Run: dart run build_runner build --delete-conflicting-outputs
+  drift_dev: ^2.21.0
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
