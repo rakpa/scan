@@ -53,12 +53,17 @@ platform :ios do
       # Export for the user to save as GitHub secret so future runs reuse this cert.
       export_path = File.expand_path("../build/dist_cert.p12")
       sh("mkdir -p ../build")
-      export_certificate(
-        keychain_path: keychain_db,
-        keychain_password: keychain_password,
-        type: "distribution",
-        path: export_path,
-        password: CERT_EXPORT_PASSWORD
+      identity = sh(
+        "security find-identity -v -p codesigning '#{keychain_db}' " \
+        "| grep 'Apple Distribution' | head -1 " \
+        "| sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+\\*?([A-F0-9]+)[[:space:]]+.*/\\1/'",
+        log: false
+      ).strip
+      UI.user_error!("No Apple Distribution identity found in keychain") if identity.empty?
+      sh(
+        "security export -k '#{keychain_db}' -P '#{keychain_password}' " \
+        "-t identities -f pkcs12 -p '#{CERT_EXPORT_PASSWORD}' " \
+        "-o '#{export_path}' #{identity}"
       )
       UI.success(
         "Exported dist_cert.p12 — download the ios-dist-cert artifact and add " \
