@@ -25,6 +25,7 @@ dependencies:
   # --- Scanning / capture ---
   # ML Kit Document Scanner (Android, requires Google Play Services) + VisionKit (iOS 13+).
   cunning_document_scanner: ^1.2.3
+  permission_handler: ^11.3.1
 
   # --- Image filters / enhancement (runs in a background isolate) ---
   image: ^4.3.0

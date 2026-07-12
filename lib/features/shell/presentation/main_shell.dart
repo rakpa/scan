@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/design/stitch_assets.dart';
 import '../../../core/design/stitch_screens.dart';
 import '../../../shared/widgets/stitch/stitch_html_view.dart';
-import '../../onboarding/data/onboarding_store.dart';
 import '../../scan/presentation/scan_controller.dart';
 
-/// Main shell — Stitch Dashboard HTML with scan FAB + bottom-nav hotspots.
+/// Main shell — Stitch Dashboard HTML with native scan FAB + bottom-nav hotspots.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, this.initialTab = 0});
 
@@ -21,7 +19,7 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   late int _tab;
-  bool _showCapturePreview = false;
+  var _htmlReady = false;
 
   @override
   void initState() {
@@ -41,118 +39,163 @@ class _MainShellState extends ConsumerState<MainShell> {
       );
       return;
     }
-    setState(() => _showCapturePreview = true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+
     final doc = await ref.read(scanControllerProvider.notifier).scanAndSave();
     if (!mounted) return;
-    setState(() => _showCapturePreview = false);
     if (doc != null) context.push('/document/${doc.id}');
   }
 
-  void _selectTab(int i) => setState(() => _tab = i);
+  void _selectTab(int i) {
+    setState(() {
+      _tab = i;
+      _htmlReady = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final scanState = ref.watch(scanControllerProvider);
-    final premium = ref.watch(onboardingStoreProvider).maybeWhen(
-          data: (store) => store.premiumUnlocked,
-          orElse: () => false,
-        );
+    final scanning = scanState.isLoading;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     ref.listen(scanControllerProvider, (prev, next) {
       if (next is AsyncError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Scan failed: ${next.error}')),
         );
-        setState(() => _showCapturePreview = false);
       }
     });
 
-    if (_showCapturePreview || scanState.isLoading) {
-      return Scaffold(
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            StitchHtmlView(
-              htmlAsset: StitchScreens.smartCaptureFor(premium: premium),
-              backgroundColor: Colors.black,
-              interactive: false,
-            ),
-            if (scanState.isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-          ],
-        ),
-      );
-    }
-
     return Scaffold(
-      body: StitchHtmlView(
-        htmlAsset: _html,
-        backgroundColor: const Color(0xFFF5F5F7),
-        interactive: _tab != 3,
-        hotspots: [
-          if (_tab <= 1)
-            StitchHotspot(
-              left: 0.72,
-              top: 0.78,
-              width: 0.22,
-              height: 0.12,
-              semanticLabel: 'Scan document',
-              onTap: _scan,
+      backgroundColor: const Color(0xFFF5F5F7),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          StitchHtmlView(
+            htmlAsset: _html,
+            backgroundColor: const Color(0xFFF5F5F7),
+            interactive: false,
+            onLoaded: () {
+              if (mounted) setState(() => _htmlReady = true);
+            },
+            hotspots: [
+              StitchHotspot(
+                left: 0.02,
+                top: 0.88,
+                width: 0.22,
+                height: 0.10,
+                semanticLabel: 'Scans',
+                onTap: () => _selectTab(0),
+              ),
+              StitchHotspot(
+                left: 0.26,
+                top: 0.88,
+                width: 0.22,
+                height: 0.10,
+                semanticLabel: 'Folders',
+                onTap: () => _selectTab(1),
+              ),
+              StitchHotspot(
+                left: 0.50,
+                top: 0.88,
+                width: 0.22,
+                height: 0.10,
+                semanticLabel: 'Search',
+                onTap: () => _selectTab(2),
+              ),
+              StitchHotspot(
+                left: 0.74,
+                top: 0.88,
+                width: 0.22,
+                height: 0.10,
+                semanticLabel: 'Profile',
+                onTap: () => _selectTab(3),
+              ),
+              if (_tab == 0)
+                StitchHotspot(
+                  left: 0.78,
+                  top: 0.01,
+                  width: 0.18,
+                  height: 0.08,
+                  semanticLabel: 'Settings',
+                  onTap: () => _selectTab(3),
+                ),
+              if (_tab == 3)
+                StitchHotspot(
+                  left: 0.05,
+                  top: 0.10,
+                  width: 0.9,
+                  height: 0.12,
+                  semanticLabel: 'Subscription',
+                  onTap: () => context.push('/paywall'),
+                ),
+            ],
+          ),
+          if (_htmlReady && _tab <= 1)
+            Positioned(
+              right: 24,
+              bottom: 88 + bottomInset,
+              child: _ScanFab(
+                onPressed: scanning ? null : _scan,
+                loading: scanning,
+              ),
             ),
-          StitchHotspot(
-            left: 0.02,
-            top: 0.905,
-            width: 0.22,
-            height: 0.09,
-            semanticLabel: 'Scans',
-            onTap: () => _selectTab(0),
-          ),
-          StitchHotspot(
-            left: 0.26,
-            top: 0.905,
-            width: 0.22,
-            height: 0.09,
-            semanticLabel: 'Folders',
-            onTap: () => _selectTab(1),
-          ),
-          StitchHotspot(
-            left: 0.50,
-            top: 0.905,
-            width: 0.22,
-            height: 0.09,
-            semanticLabel: 'Search',
-            onTap: () => _selectTab(2),
-          ),
-          StitchHotspot(
-            left: 0.74,
-            top: 0.905,
-            width: 0.22,
-            height: 0.09,
-            semanticLabel: 'Profile',
-            onTap: () => _selectTab(3),
-          ),
-          if (_tab == 0)
-            StitchHotspot(
-              left: 0.82,
-              top: 0.045,
-              width: 0.14,
-              height: 0.07,
-              semanticLabel: 'Settings',
-              onTap: () => _selectTab(3),
-            ),
-          if (_tab == 3)
-            StitchHotspot(
-              left: 0.05,
-              top: 0.12,
-              width: 0.9,
-              height: 0.12,
-              semanticLabel: 'Subscription',
-              onTap: () => context.push('/paywall'),
+          if (scanning)
+            ColoredBox(
+              color: Colors.black.withValues(alpha: 0.35),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Opening scanner…',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScanFab extends StatelessWidget {
+  const _ScanFab({required this.onPressed, required this.loading});
+
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      shadowColor: const Color(0xFF0040A1).withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(16),
+      color: const Color(0xFF0040A1),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: loading
+              ? const Padding(
+                  padding: EdgeInsets.all(18),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(
+                  Icons.add_a_photo_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+        ),
       ),
     );
   }

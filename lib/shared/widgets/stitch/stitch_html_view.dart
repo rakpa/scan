@@ -3,12 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-// NOTE: Do NOT import 'package:webview_flutter_web/webview_flutter_web.dart' here.
-// That package (and its transitive dep 'web') pull in dart:js_interop / dart:ui_web
-// which are web-only and cause compile errors on iOS/Android builds.
-// Web-specific initialization must be done from main.dart (or a web-only entrypoint).
-
 import '../../../core/design/stitch_assets.dart';
+import 'stitch_html_patch.dart';
 
 import 'stitch_html_view_web.dart' if (dart.library.io) 'stitch_html_view_stub.dart';
 
@@ -21,6 +17,7 @@ class StitchHtmlView extends StatefulWidget {
     this.overlay,
     this.interactive = true,
     this.backgroundColor = Colors.black,
+    this.onLoaded,
   });
 
   final String htmlAsset;
@@ -28,6 +25,7 @@ class StitchHtmlView extends StatefulWidget {
   final Widget? overlay;
   final bool interactive;
   final Color backgroundColor;
+  final VoidCallback? onLoaded;
 
   @override
   State<StitchHtmlView> createState() => _StitchHtmlViewState();
@@ -37,25 +35,39 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
   WebViewController? _controller;
   String? _webViewType;
   var _loading = true;
+  String? _loadKey;
 
   @override
-  void initState() {
-    super.initState();
-    _init();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mq = MediaQuery.of(context);
+    final key =
+        '${widget.htmlAsset}|${mq.size.width}|${mq.size.height}|'
+        '${mq.padding.top}|${mq.padding.bottom}';
+    if (_loadKey != key) {
+      _loadKey = key;
+      _loading = true;
+      _init(mq.padding.top, mq.padding.bottom);
+    }
   }
 
   @override
   void didUpdateWidget(covariant StitchHtmlView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.htmlAsset != widget.htmlAsset) {
+      _loadKey = null;
       _loading = true;
-      _init();
     }
   }
 
-  Future<void> _init() async {
-    final html = await rootBundle.loadString(widget.htmlAsset);
-    if (!mounted) return;
+  Future<void> _init(double topInset, double bottomInset) async {
+    final raw = await rootBundle.loadString(widget.htmlAsset);
+    final html = StitchHtmlPatch.forDevice(
+      raw,
+      topInset: topInset,
+      bottomInset: bottomInset,
+    );
+    if (!mounted || _loadKey == null) return;
 
     if (kIsWeb) {
       final viewType = await registerStitchHtmlIframe(html);
@@ -65,6 +77,7 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
         _controller = null;
         _loading = false;
       });
+      widget.onLoaded?.call();
       return;
     }
 
@@ -74,7 +87,9 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
-            if (mounted) setState(() => _loading = false);
+            if (!mounted) return;
+            setState(() => _loading = false);
+            widget.onLoaded?.call();
           },
         ),
       );
@@ -94,11 +109,6 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
       color: widget.backgroundColor,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // The Stitch exports are responsive mobile pages (viewport meta,
-          // dvh heights, centred max-width) — render them at the widget's own
-          // size like a phone browser. No Transform.scale: Flutter transforms
-          // don't apply to platform views (iframes/WebViews), which showed up
-          // as a "cropped" top-left corner on web.
           return Stack(
             fit: StackFit.expand,
             children: [
@@ -111,11 +121,16 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
                         )
                       : const SizedBox.shrink(),
               if (_loading)
-                const Center(
+                Center(
                   child: SizedBox(
                     width: 28,
                     height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: widget.backgroundColor.computeLuminance() > 0.5
+                          ? const Color(0xFF0040A1)
+                          : Colors.white,
+                    ),
                   ),
                 ),
               if (widget.overlay != null) Positioned.fill(child: widget.overlay!),
@@ -143,24 +158,4 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
   }
 }
 
-/// Call this once early in your app (e.g. in main.dart) if you use StitchHtmlView on web.
-/// The actual WebWebViewPlatform registration must live in a file that is only
-/// imported on web (or inside if (kIsWeb) after a conditional import of webview_flutter_web).
-void ensureStitchWebViewInitialized() {
-  // Web-specific WebViewPlatform setup has been moved out of this file
-  // to prevent pulling web-only packages (webview_flutter_web + web + dart:js_interop*)
-  // into iOS/Android builds.
-  //
-  // Recommended: put the following in your main.dart (or main_web.dart):
-  //
-  // import 'package:flutter/foundation.dart';
-  // import 'package:webview_flutter/webview_flutter.dart';
-  // import 'package:webview_flutter_web/webview_flutter_web.dart' show WebWebViewPlatform;
-  //
-  // void main() {
-  //   if (kIsWeb) {
-  //     WebViewPlatform.instance = WebWebViewPlatform();
-  //   }
-  //   runApp(const MyApp());
-  // }
-}
+void ensureStitchWebViewInitialized() {}

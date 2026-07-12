@@ -1,4 +1,6 @@
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
+import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Thin wrapper around the native document scanner plugin.
 ///
@@ -11,10 +13,29 @@ class DocumentScannerService {
   /// [maxPages] caps a single scanning session. Gallery import is allowed so
   /// users can build documents from existing photos too.
   Future<List<String>?> scan({int maxPages = 24}) async {
+    if (!kIsWeb) {
+      final granted = await _ensureCameraPermission();
+      if (!granted) {
+        throw StateError(
+          'Camera permission is required to scan documents. '
+          'Enable it in Settings and try again.',
+        );
+      }
+    }
+
     final images = await CunningDocumentScanner.getPictures(
       noOfPages: maxPages,
       isGalleryImportAllowed: true,
     );
     return images;
+  }
+
+  Future<bool> _ensureCameraPermission() async {
+    var status = await Permission.camera.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) return false;
+
+    status = await Permission.camera.request();
+    return status.isGranted;
   }
 }
