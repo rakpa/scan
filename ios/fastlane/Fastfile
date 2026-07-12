@@ -25,7 +25,7 @@ def fetch_distribution_certificates
   connect_api_token
   Spaceship::ConnectAPI.token = connect_api_token
 
-  %w[IOS_DISTRIBUTION DISTRIBUTION APPLE_DISTRIBUTION].flat_map do |cert_type|
+  %w[IOS_DISTRIBUTION DISTRIBUTION].flat_map do |cert_type|
     Spaceship::ConnectAPI::Certificate.all(filter: { certificateType: cert_type })
   end.uniq(&:id)
 rescue StandardError => e
