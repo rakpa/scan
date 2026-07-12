@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../onboarding/data/onboarding_store.dart';
 import '../../export/presentation/export_controller.dart';
 import '../../scan/presentation/scan_controller.dart';
@@ -101,9 +102,10 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              StitchFrame(
-                asset: StitchAssets.documentExportFor(premium: premium),
+              StitchHtmlView(
+                htmlAsset: StitchScreens.documentExportFor(premium: premium),
                 backgroundColor: const Color(0xFFF9F9FB),
+                interactive: false,
                 overlay: previewOverlay,
                 hotspots: [
                   StitchHotspot(
@@ -164,9 +166,10 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
                 ],
               ),
               if (scanState.isLoading)
-                StitchFrame(
-                  asset: StitchAssets.perspectiveCrop,
+                StitchHtmlView(
+                  htmlAsset: StitchScreens.perspectiveCrop,
                   backgroundColor: Colors.black87,
+                  interactive: false,
                 ),
             ],
           );

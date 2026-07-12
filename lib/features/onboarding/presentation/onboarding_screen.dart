@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
-/// Onboarding — sequential Stitch PNGs 02→06 (Auto-Crop through Export).
+/// Onboarding — sequential Stitch HTML screens (Auto-Crop → Export).
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -18,7 +19,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _index = 0;
 
-  bool get _isLast => _index == StitchAssets.onboardingFlow.length - 1;
+  bool get _isLast => _index == StitchScreens.onboardingFlow.length - 1;
 
   @override
   void dispose() {
@@ -48,41 +49,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          PageView.builder(
-            controller: _controller,
-            onPageChanged: (i) => setState(() => _index = i),
-            itemCount: StitchAssets.onboardingFlow.length,
-            itemBuilder: (context, i) => StitchFrame(
-              asset: StitchAssets.onboardingFlow[i],
-              backgroundColor: Colors.white,
+      body: PageView.builder(
+        controller: _controller,
+        onPageChanged: (i) => setState(() => _index = i),
+        itemCount: StitchScreens.onboardingFlow.length,
+        itemBuilder: (context, i) => StitchHtmlView(
+          htmlAsset: StitchScreens.onboardingFlow[i],
+          backgroundColor: Colors.white,
+          interactive: false,
+          hotspots: [
+            StitchHotspot(
+              left: 0.05,
+              top: 0.82,
+              width: 0.9,
+              height: 0.08,
+              semanticLabel: 'Next',
+              onTap: _next,
             ),
-          ),
-          // Next button region (bottom center — matches Stitch onboarding)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: MediaQuery.sizeOf(context).height * 0.14,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(onTap: _next),
+            StitchHotspot(
+              left: 0.2,
+              top: 0.9,
+              width: 0.6,
+              height: 0.06,
+              semanticLabel: 'Skip',
+              onTap: _skip,
             ),
-          ),
-          // Skip link region (above Next)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.sizeOf(context).height * 0.14,
-            height: MediaQuery.sizeOf(context).height * 0.06,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(onTap: _skip),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

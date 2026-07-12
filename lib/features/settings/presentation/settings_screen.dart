@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 
-/// Settings — full Stitch Settings PNG.
+/// Settings — Stitch Settings HTML.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, this.embedded = false});
 
@@ -14,9 +15,10 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
-      body: StitchFrame(
-        asset: StitchAssets.settings,
+      body: StitchHtmlView(
+        htmlAsset: StitchScreens.settings,
         backgroundColor: const Color(0xFFF5F5F7),
+        interactive: true,
         hotspots: [
           StitchHotspot(
             left: 0.05,

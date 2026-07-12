@@ -5,13 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/theme/app_theme.dart';
 import 'core/design/stitch_assets.dart';
+import 'core/design/stitch_screens.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/paywall/presentation/paywall_screen.dart';
 import 'features/splash/presentation/splash_screen.dart';
-import 'shared/widgets/stitch/stitch_frame.dart';
+import 'shared/widgets/stitch/stitch_html_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ensureStitchWebViewInitialized();
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
   runApp(const ProviderScope(child: _WebPreviewApp()));
@@ -35,7 +37,6 @@ final _webRouter = GoRouter(
   ],
 );
 
-/// Web-only shell — all Stitch PNGs, scan flow simulated without native DB.
 class _WebMainShell extends StatefulWidget {
   const _WebMainShell();
 
@@ -48,9 +49,9 @@ class _WebMainShellState extends State<_WebMainShell> {
   bool _scanning = false;
   bool _premium = false;
 
-  String get _asset => switch (_tab) {
-        3 => StitchAssets.settings,
-        _ => StitchAssets.dashboard,
+  String get _html => switch (_tab) {
+        3 => StitchScreens.settings,
+        _ => StitchScreens.dashboard,
       };
 
   Future<void> _scan() async {
@@ -65,17 +66,19 @@ class _WebMainShellState extends State<_WebMainShell> {
   Widget build(BuildContext context) {
     if (_scanning) {
       return Scaffold(
-        body: StitchFrame(
-          asset: StitchAssets.smartCaptureFor(premium: _premium),
+        body: StitchHtmlView(
+          htmlAsset: StitchScreens.smartCaptureFor(premium: _premium),
           backgroundColor: Colors.black,
+          interactive: false,
         ),
       );
     }
 
     return Scaffold(
-      body: StitchFrame(
-        asset: _asset,
+      body: StitchHtmlView(
+        htmlAsset: _html,
         backgroundColor: const Color(0xFFF5F5F7),
+        interactive: _tab != 3,
         hotspots: [
           if (_tab <= 1)
             StitchHotspot(
@@ -140,9 +143,10 @@ class _WebDocumentDemoState extends State<_WebDocumentDemo> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          StitchFrame(
-            asset: StitchAssets.premiumDocumentExport,
+          StitchHtmlView(
+            htmlAsset: StitchScreens.premiumDocumentExport,
             backgroundColor: const Color(0xFFF9F9FB),
+            interactive: false,
             hotspots: [
               StitchHotspot(
                 left: 0.02,
@@ -181,9 +185,10 @@ class _WebDocumentDemoState extends State<_WebDocumentDemo> {
             ],
           ),
           if (_appending)
-            StitchFrame(
-              asset: StitchAssets.perspectiveCrop,
+            StitchHtmlView(
+              htmlAsset: StitchScreens.perspectiveCrop,
               backgroundColor: Colors.black87,
+              interactive: false,
             ),
         ],
       ),
@@ -197,9 +202,10 @@ class _WebEnhanceDemo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: StitchFrame(
-        asset: StitchAssets.filterEnhance,
+      body: StitchHtmlView(
+        htmlAsset: StitchScreens.filterEnhance,
         backgroundColor: const Color(0xFFF9F9FB),
+        interactive: false,
         hotspots: [
           StitchHotspot(
             left: 0.02,

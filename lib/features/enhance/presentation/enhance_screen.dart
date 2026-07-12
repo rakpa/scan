@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../documents/domain/entities.dart';
 import '../../documents/presentation/documents_providers.dart';
 import '../data/image_processor.dart';
@@ -183,9 +184,10 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9FB),
-      body: StitchFrame(
-        asset: StitchAssets.filterEnhance,
+      body: StitchHtmlView(
+        htmlAsset: StitchScreens.filterEnhance,
         backgroundColor: const Color(0xFFF9F9FB),
+        interactive: false,
         overlay: previewOverlay,
         hotspots: [
           StitchHotspot(

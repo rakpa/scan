@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../onboarding/data/onboarding_store.dart';
 import '../../scan/presentation/scan_controller.dart';
 
-/// Main shell — Stitch Dashboard PNG with scan FAB + bottom-nav hotspots.
+/// Main shell — Stitch Dashboard HTML with scan FAB + bottom-nav hotspots.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, this.initialTab = 0});
 
@@ -28,9 +29,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     _tab = widget.initialTab;
   }
 
-  String get _asset => switch (_tab) {
-        3 => StitchAssets.settings,
-        _ => StitchAssets.dashboard,
+  String get _html => switch (_tab) {
+        3 => StitchScreens.settings,
+        _ => StitchScreens.dashboard,
       };
 
   Future<void> _scan() async {
@@ -72,10 +73,10 @@ class _MainShellState extends ConsumerState<MainShell> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            StitchFrame(
-              asset: StitchAssets.smartCaptureFor(premium: premium),
+            StitchHtmlView(
+              htmlAsset: StitchScreens.smartCaptureFor(premium: premium),
               backgroundColor: Colors.black,
-              fit: BoxFit.cover,
+              interactive: false,
             ),
             if (scanState.isLoading)
               const Center(
@@ -87,11 +88,11 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
 
     return Scaffold(
-      body: StitchFrame(
-        asset: _asset,
+      body: StitchHtmlView(
+        htmlAsset: _html,
         backgroundColor: const Color(0xFFF5F5F7),
+        interactive: _tab != 3,
         hotspots: [
-          // FAB — camera / scan
           if (_tab <= 1)
             StitchHotspot(
               left: 0.72,
@@ -101,7 +102,6 @@ class _MainShellState extends ConsumerState<MainShell> {
               semanticLabel: 'Scan document',
               onTap: _scan,
             ),
-          // Bottom nav — Scans
           StitchHotspot(
             left: 0.02,
             top: 0.905,
@@ -110,7 +110,6 @@ class _MainShellState extends ConsumerState<MainShell> {
             semanticLabel: 'Scans',
             onTap: () => _selectTab(0),
           ),
-          // Folders
           StitchHotspot(
             left: 0.26,
             top: 0.905,
@@ -119,7 +118,6 @@ class _MainShellState extends ConsumerState<MainShell> {
             semanticLabel: 'Folders',
             onTap: () => _selectTab(1),
           ),
-          // Search
           StitchHotspot(
             left: 0.50,
             top: 0.905,
@@ -128,7 +126,6 @@ class _MainShellState extends ConsumerState<MainShell> {
             semanticLabel: 'Search',
             onTap: () => _selectTab(2),
           ),
-          // Profile / Settings
           StitchHotspot(
             left: 0.74,
             top: 0.905,
@@ -137,7 +134,6 @@ class _MainShellState extends ConsumerState<MainShell> {
             semanticLabel: 'Profile',
             onTap: () => _selectTab(3),
           ),
-          // Settings gear (top-right on dashboard)
           if (_tab == 0)
             StitchHotspot(
               left: 0.82,
@@ -146,6 +142,15 @@ class _MainShellState extends ConsumerState<MainShell> {
               height: 0.07,
               semanticLabel: 'Settings',
               onTap: () => _selectTab(3),
+            ),
+          if (_tab == 3)
+            StitchHotspot(
+              left: 0.05,
+              top: 0.12,
+              width: 0.9,
+              height: 0.12,
+              semanticLabel: 'Subscription',
+              onTap: () => context.push('/paywall'),
             ),
         ],
       ),

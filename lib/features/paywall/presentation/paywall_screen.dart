@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
-import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../../core/design/stitch_screens.dart';
+import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
-/// Paywall — Stitch Premium Dashboard PNG; tap bottom to continue.
+/// Paywall — Stitch Premium Dashboard HTML.
 class PaywallScreen extends ConsumerWidget {
   const PaywallScreen({super.key});
 
@@ -21,23 +22,24 @@ class PaywallScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
-      body: StitchFrame(
-        asset: StitchAssets.premiumDashboard,
+      body: StitchHtmlView(
+        htmlAsset: StitchScreens.premiumDashboard,
         backgroundColor: const Color(0xFFF5F5F7),
+        interactive: true,
         hotspots: [
           StitchHotspot(
             left: 0.05,
             top: 0.02,
             width: 0.15,
-            height: 0.08,
+            height: 0.06,
             semanticLabel: 'Close',
             onTap: () => _finish(context, ref),
           ),
           StitchHotspot(
             left: 0.1,
-            top: 0.85,
+            top: 0.88,
             width: 0.8,
-            height: 0.1,
+            height: 0.08,
             semanticLabel: 'Start trial',
             onTap: () => _finish(context, ref),
           ),
