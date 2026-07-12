@@ -8,7 +8,7 @@ require "shellwords"
 
 default_platform(:ios)
 
-FASTLANE_DIR = __dir__
+FASTLANE_DIR = File.expand_path(__dir__)
 IOS_DIR = File.expand_path("..", FASTLANE_DIR)
 PROJECT_ROOT = File.expand_path("..", IOS_DIR)
 BUILD_DIR = File.join(PROJECT_ROOT, "build")
@@ -17,8 +17,11 @@ ARTIFACT_IPA_DIR = File.join(BUILD_DIR, "ipa")
 DIST_CERT_PATH = File.join(BUILD_DIR, "dist_cert.p12")
 
 APP_ID = ENV["BUNDLE_ID"] || "com.scanella.mobile"
-CERT_EXPORT_PASSWORD = ENV["IOS_DIST_CERT_PASSWORD"].to_s.strip
-CERT_EXPORT_PASSWORD = "scan-ci-export" if CERT_EXPORT_PASSWORD.empty?
+
+def cert_export_password
+  pwd = ENV["IOS_DIST_CERT_PASSWORD"].to_s.strip
+  pwd.empty? ? "scan-ci-export" : pwd
+end
 # Apple allows at most 2 distribution certs per team. CI runners never have the
 # private key for portal certs created on other machines, so cert() always tries
 # to mint a new identity unless IOS_DIST_CERT_P12_BASE64 is provided.
@@ -103,7 +106,7 @@ platform :ios do
       File.binwrite(p12_path, Base64.decode64(p12_secret))
       import_certificate(
         certificate_path: p12_path,
-        certificate_password: CERT_EXPORT_PASSWORD,
+        certificate_password: cert_export_password,
         keychain_name: keychain_name,
         keychain_password: keychain_password
       )
@@ -146,14 +149,14 @@ platform :ios do
       UI.user_error!("No Apple Distribution identity found in keychain") if found == "0"
       sh(
         "security export -k '#{keychain_db}' -t identities -f pkcs12 " \
-        "-P #{Shellwords.escape(CERT_EXPORT_PASSWORD)} " \
+        "-P #{Shellwords.escape(cert_export_password)} " \
         "-o #{Shellwords.escape(DIST_CERT_PATH)}"
       )
       encoded = Base64.strict_encode64(File.binread(DIST_CERT_PATH))
       UI.success(
-        "Exported dist_cert.p12 (password: #{CERT_EXPORT_PASSWORD}). " \
+        "Exported dist_cert.p12 (password: #{cert_export_password}). " \
         "Download the ios-dist-cert artifact, then add GitHub secrets " \
-        "IOS_DIST_CERT_P12_BASE64 and IOS_DIST_CERT_PASSWORD=#{CERT_EXPORT_PASSWORD} " \
+        "IOS_DIST_CERT_P12_BASE64 and IOS_DIST_CERT_PASSWORD=#{cert_export_password} " \
         "so future runs reuse this cert instead of creating new ones."
       )
       UI.message("IOS_DIST_CERT_P12_BASE64 length for secret: #{encoded.length} chars")
@@ -172,7 +175,7 @@ platform :ios do
       targets: ["Runner"]
     )
 
-    export_plist = File.join(FASTLANE_DIR, "ExportOptions.plist")
+    export_plist = File.expand_path("ExportOptions.plist", FASTLANE_DIR)
     File.write(
       export_plist,
       <<~PLIST,
@@ -198,9 +201,10 @@ platform :ios do
 
     build_number = ENV["BUILD_NUMBER"] || "1"
     sh(
-      "cd #{Shellwords.escape(PROJECT_ROOT)} && flutter build ipa --release " \
+      "flutter build ipa --release " \
       "--build-number=#{build_number} --build-name=1.0.0 " \
-      "--export-options-plist=#{Shellwords.escape(export_plist)}"
+      "--export-options-plist=#{Shellwords.escape(export_plist)}",
+      chdir: PROJECT_ROOT
     )
 
     ipa_files = Dir[File.join(FLUTTER_IPA_DIR, "*.ipa")]
