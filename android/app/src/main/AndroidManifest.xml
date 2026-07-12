@@ -5,7 +5,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
-        android:label="Scanella"
+        android:label="ScanMaster AI"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

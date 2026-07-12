@@ -44,7 +44,7 @@ class _ScanFrameArt extends StatelessWidget {
       height: 230,
       child: CustomPaint(
         painter: _ScanFramePainter(
-          bracket: BrandColors.purple,
+          bracket: BrandColors.primary,
           paper: context.colors.surfaceContainerHighest,
         ),
       ),
@@ -133,7 +133,7 @@ class _PdfFileArt extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: BrandColors.purple.withValues(alpha: 0.3),
+            color: BrandColors.primary.withValues(alpha: 0.3),
             blurRadius: 30,
             offset: const Offset(0, 14),
           ),
@@ -158,12 +158,12 @@ class _PdfFileArt extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.picture_as_pdf_rounded,
-                    size: 56, color: BrandColors.purpleDeep),
+                    size: 56, color: BrandColors.primaryDeep),
                 const SizedBox(height: 6),
                 Text(
                   'PDF',
                   style: context.text.titleLarge?.copyWith(
-                    color: BrandColors.purpleDeep,
+                    color: BrandColors.primaryDeep,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1,
                   ),
@@ -206,7 +206,7 @@ class _ShareCardArt extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.colors.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BrandColors.purple, width: 1.5),
+              border: Border.all(color: BrandColors.primary, width: 1.5),
             ),
             child: CustomPaint(painter: _ShareNodesPainter()),
           ),
@@ -224,7 +224,7 @@ class _ShareNodesPainter extends CustomPainter {
     final c = Offset(size.width * 0.66, size.height * 0.68);
 
     final link = Paint()
-      ..color = BrandColors.purpleBright
+      ..color = BrandColors.primaryBright
       ..strokeWidth = 3;
     canvas.drawLine(a, b, link);
     canvas.drawLine(a, c, link);
@@ -233,8 +233,8 @@ class _ShareNodesPainter extends CustomPainter {
       canvas.drawCircle(o, r, Paint()..color = color);
     }
 
-    node(a, BrandColors.purple, 13);
-    node(b, BrandColors.purpleBright, 11);
+    node(a, BrandColors.primary, 13);
+    node(b, BrandColors.primaryBright, 11);
     node(c, const Color(0xFFA78BFA), 11);
   }
 

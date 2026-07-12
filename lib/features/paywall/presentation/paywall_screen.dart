@@ -141,11 +141,11 @@ class _HighlightCard extends StatelessWidget {
           Container(
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            color: BrandColors.amber,
+            color: BrandColors.secondaryContainer,
             child: Text(
               'Highlight your scanned',
               style: context.text.titleSmall
-                  ?.copyWith(color: BrandColors.purpleDeep),
+                  ?.copyWith(color: BrandColors.primary),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -180,14 +180,14 @@ class _Tool extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: on ? BrandColors.amber : null,
+            color: on ? BrandColors.secondaryContainer : null,
             border: on
                 ? null
                 : Border.all(color: context.colors.primary.withValues(alpha: 0.4)),
           ),
           child: Icon(icon,
               size: 22,
-              color: on ? BrandColors.purpleDeep : context.colors.onSurfaceVariant),
+              color: on ? BrandColors.primary : context.colors.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         Text(label, style: context.text.bodySmall),

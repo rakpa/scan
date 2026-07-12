@@ -22,7 +22,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: tokens.canvasBackground,
       textTheme: textTheme,
       extensions: [tokens],
       splashFactory: InkSparkle.splashFactory,

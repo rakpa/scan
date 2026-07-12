@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/app_color_tokens.dart';
 
-/// The app logo mark — a flat purple rounded square framed by white scan
-/// brackets, holding a white document with purple text lines and a small red
-/// "2026" ribbon. No gradients.
-///
-/// The Android launch screen draws a matching version so the mark appears the
-/// instant the app opens (see res/drawable/logo_glyph.xml).
+/// ScanMaster AI logo mark — blue rounded square with white scan brackets
+/// and document icon, matching the Stitch premium logo.
 class AppLogoMark extends StatelessWidget {
-  const AppLogoMark({super.key, this.size = 120, this.showRibbon = true});
+  const AppLogoMark({super.key, this.size = 120, this.showRibbon = false});
 
   final double size;
   final bool showRibbon;
@@ -27,11 +23,11 @@ class AppLogoMark extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: BrandColors.purpleBright,
+              color: BrandColors.primaryContainer,
               borderRadius: BorderRadius.circular(radius),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.16),
+                  color: BrandColors.primary.withValues(alpha: 0.35),
                   blurRadius: size * 0.14,
                   offset: Offset(0, size * 0.06),
                 ),
@@ -46,37 +42,12 @@ class AppLogoMark extends StatelessWidget {
               ),
             ),
           ),
-          if (showRibbon)
-            Positioned(
-              top: size * 0.07,
-              right: -size * 0.01,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: size * 0.07,
-                  vertical: size * 0.03,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8362F),
-                  borderRadius: BorderRadius.circular(size * 0.06),
-                ),
-                child: Text(
-                  '2026',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: size * 0.10,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 }
 
-/// White document card with purple text lines and a folded corner.
 class _DocumentMark extends StatelessWidget {
   const _DocumentMark({required this.size});
   final double size;
@@ -117,10 +88,10 @@ class _DocumentPainter extends CustomPainter {
       ..lineTo(w - fold, fold)
       ..lineTo(w, fold)
       ..close();
-    canvas.drawPath(foldPath, Paint()..color = const Color(0xFFE9E6FF));
+    canvas.drawPath(foldPath, Paint()..color = BrandColors.primaryFixed);
 
     final line = Paint()
-      ..color = BrandColors.purple
+      ..color = BrandColors.primary
       ..strokeWidth = h * 0.045
       ..strokeCap = StrokeCap.round;
     final left = w * 0.18;
@@ -135,7 +106,6 @@ class _DocumentPainter extends CustomPainter {
   bool shouldRepaint(_DocumentPainter oldDelegate) => false;
 }
 
-/// Four white L-shaped scan brackets framing the document.
 class _ScanBracketPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

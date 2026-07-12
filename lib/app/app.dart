@@ -16,8 +16,7 @@ class DocScannerApp extends ConsumerWidget {
     final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
-      // Placeholder name — swap once branding is finalised.
-      title: 'Doc Scanner',
+      title: 'ScanMaster AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

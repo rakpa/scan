@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Extra design tokens that don't fit Material's [ColorScheme] — flat brand
-/// surfaces and semantic colors. No gradients: the design is solid dark-purple.
-///
-/// Exposed as a [ThemeExtension] so widgets read them via
-/// `Theme.of(context).extension<AppTokens>()!`.
+/// Extra design tokens that don't fit Material's [ColorScheme] — brand surfaces,
+/// neumorphic canvas, and semantic colors from the ScanMaster AI Stitch design.
 @immutable
 class AppTokens extends ThemeExtension<AppTokens> {
   const AppTokens({
@@ -18,17 +15,18 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.warning,
     required this.danger,
     required this.premium,
+    required this.canvasBackground,
   });
 
-  /// Solid dark-purple used on the splash + scan hero background.
+  /// Deep navy used on the splash screen.
   final Color splashBackground;
   final Color scanSurface;
 
-  /// Light purple container fill + its on-color (chips, soft badges).
+  /// Light container fill + its on-color (chips, soft badges).
   final Color brandSoft;
   final Color onBrandSoft;
 
-  /// A recessed surface (cards, wells).
+  /// A recessed surface (search wells, pressed neumorphic areas).
   final Color surfaceSunken;
 
   /// Lowest-emphasis text (timestamps, captions).
@@ -38,8 +36,11 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final Color warning;
   final Color danger;
 
-  /// Highlight / "Pro" accent (amber).
+  /// Highlight / "Pro" accent.
   final Color premium;
+
+  /// Dashboard canvas (#F5F5F7 in Stitch).
+  final Color canvasBackground;
 
   @override
   AppTokens copyWith({
@@ -53,6 +54,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? warning,
     Color? danger,
     Color? premium,
+    Color? canvasBackground,
   }) {
     return AppTokens(
       splashBackground: splashBackground ?? this.splashBackground,
@@ -65,6 +67,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       warning: warning ?? this.warning,
       danger: danger ?? this.danger,
       premium: premium ?? this.premium,
+      canvasBackground: canvasBackground ?? this.canvasBackground,
     );
   }
 
@@ -82,105 +85,109 @@ class AppTokens extends ThemeExtension<AppTokens> {
       warning: Color.lerp(warning, other.warning, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       premium: Color.lerp(premium, other.premium, t)!,
+      canvasBackground: Color.lerp(canvasBackground, other.canvasBackground, t)!,
     );
   }
 }
 
-/// Raw brand colour constants. The single source of truth — change these to
-/// re-skin the whole app. Dark-purple, flat.
+/// Raw brand colour constants from Stitch project 9661105501663215896.
 abstract final class BrandColors {
-  static const Color purple = Color(0xFF5B21B6); // primary (dark purple)
-  static const Color purpleBright = Color(0xFF6D28D9); // logo / accents
-  static const Color purpleDeep = Color(0xFF2E1065); // splash / scan surface
-  static const Color purpleSoft = Color(0xFFEDE9FE); // light container
+  static const Color primary = Color(0xFF0040A1);
+  static const Color primaryContainer = Color(0xFF0056D2);
+  static const Color primaryFixed = Color(0xFFDAE2FF);
+  static const Color secondary = Color(0xFF006A6A);
+  static const Color secondaryContainer = Color(0xFF90EFEF);
+  static const Color splashNavy = Color(0xFF001847);
+  static const Color canvas = Color(0xFFF5F5F7);
+  static const Color surface = Color(0xFFF9F9FB);
   static const Color amber = Color(0xFFF59E0B);
 
   static const Color success = Color(0xFF10B981);
   static const Color warning = Color(0xFFF59E0B);
-  static const Color danger = Color(0xFFEF4444);
+  static const Color danger = Color(0xFFBA1A1A);
 }
 
 /// Light + dark [ColorScheme]s and matching [AppTokens].
 abstract final class AppPalette {
-  // ---- Light ----
   static const ColorScheme lightScheme = ColorScheme(
     brightness: Brightness.light,
-    primary: BrandColors.purple,
+    primary: BrandColors.primary,
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: BrandColors.purpleSoft,
-    onPrimaryContainer: Color(0xFF2E1065),
-    secondary: BrandColors.purpleBright,
+    primaryContainer: BrandColors.primaryContainer,
+    onPrimaryContainer: Color(0xFFCCD8FF),
+    secondary: BrandColors.secondary,
     onSecondary: Color(0xFFFFFFFF),
-    secondaryContainer: BrandColors.purpleSoft,
-    onSecondaryContainer: Color(0xFF2E1065),
-    tertiary: BrandColors.amber,
-    onTertiary: Color(0xFF3D2C00),
+    secondaryContainer: BrandColors.secondaryContainer,
+    onSecondaryContainer: Color(0xFF006E6E),
+    tertiary: Color(0xFF2E4B58),
+    onTertiary: Color(0xFFFFFFFF),
     error: BrandColors.danger,
     onError: Color(0xFFFFFFFF),
-    surface: Color(0xFFFFFFFF),
-    onSurface: Color(0xFF18181B),
-    surfaceContainerHighest: Color(0xFFF4F4F7),
-    onSurfaceVariant: Color(0xFF52525B),
-    outline: Color(0xFFD4D4D8),
-    outlineVariant: Color(0xFFE7E7EC),
+    surface: BrandColors.surface,
+    onSurface: Color(0xFF1A1C1D),
+    surfaceContainerHighest: Color(0xFFE2E2E4),
+    onSurfaceVariant: Color(0xFF424654),
+    outline: Color(0xFF737785),
+    outlineVariant: Color(0xFFC3C6D6),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFF2A2533),
-    onInverseSurface: Color(0xFFF4F4F7),
-    inversePrimary: Color(0xFFC4B5FD),
+    inverseSurface: Color(0xFF2F3132),
+    onInverseSurface: Color(0xFFF0F0F2),
+    inversePrimary: Color(0xFFB2C5FF),
   );
 
   static const AppTokens lightTokens = AppTokens(
-    splashBackground: BrandColors.purpleDeep,
-    scanSurface: BrandColors.purpleDeep,
-    brandSoft: BrandColors.purpleSoft,
-    onBrandSoft: Color(0xFF4C1D95),
-    surfaceSunken: Color(0xFFF4F4F7),
-    textTertiary: Color(0xFFA1A1AA),
+    splashBackground: BrandColors.splashNavy,
+    scanSurface: BrandColors.primaryContainer,
+    brandSoft: BrandColors.primaryFixed,
+    onBrandSoft: Color(0xFF0040A1),
+    surfaceSunken: Color(0xFFF3F3F5),
+    textTertiary: Color(0xFF737785),
     success: BrandColors.success,
     warning: BrandColors.warning,
     danger: BrandColors.danger,
     premium: BrandColors.amber,
+    canvasBackground: BrandColors.canvas,
   );
 
-  // ---- Dark ----
   static const ColorScheme darkScheme = ColorScheme(
     brightness: Brightness.dark,
-    primary: Color(0xFFA78BFA),
-    onPrimary: Color(0xFF2E1065),
-    primaryContainer: Color(0xFF4C1D95),
-    onPrimaryContainer: Color(0xFFEDE9FE),
-    secondary: Color(0xFFC4B5FD),
-    onSecondary: Color(0xFF2E1065),
-    secondaryContainer: Color(0xFF4C1D95),
-    onSecondaryContainer: Color(0xFFEDE9FE),
-    tertiary: BrandColors.amber,
-    onTertiary: Color(0xFF3D2C00),
-    error: Color(0xFFFF6B6B),
-    onError: Color(0xFF4A0A0A),
-    surface: Color(0xFF0F0B1A),
-    onSurface: Color(0xFFF4F4F7),
-    surfaceContainerHighest: Color(0xFF1C1730),
-    onSurfaceVariant: Color(0xFFA9A4B8),
-    outline: Color(0xFF3F3A4D),
-    outlineVariant: Color(0xFF272233),
+    primary: Color(0xFFB2C5FF),
+    onPrimary: Color(0xFF001847),
+    primaryContainer: Color(0xFF0040A1),
+    onPrimaryContainer: Color(0xFFCCD8FF),
+    secondary: Color(0xFF76D6D5),
+    onSecondary: Color(0xFF002020),
+    secondaryContainer: Color(0xFF004F4F),
+    onSecondaryContainer: Color(0xFF93F2F2),
+    tertiary: Color(0xFFADCBDA),
+    onTertiary: Color(0xFF001F2A),
+    error: Color(0xFFFFB4AB),
+    onError: Color(0xFF690005),
+    surface: Color(0xFF0F1218),
+    onSurface: Color(0xFFF0F0F2),
+    surfaceContainerHighest: Color(0xFF1E2228),
+    onSurfaceVariant: Color(0xFFC3C6D6),
+    outline: Color(0xFF737785),
+    outlineVariant: Color(0xFF424654),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFFF4F4F7),
-    onInverseSurface: Color(0xFF2A2533),
-    inversePrimary: BrandColors.purple,
+    inverseSurface: Color(0xFFF0F0F2),
+    onInverseSurface: Color(0xFF2F3132),
+    inversePrimary: BrandColors.primary,
   );
 
   static const AppTokens darkTokens = AppTokens(
-    splashBackground: BrandColors.purpleDeep,
-    scanSurface: Color(0xFF241848),
-    brandSoft: Color(0xFF2A2140),
-    onBrandSoft: Color(0xFFC4B5FD),
-    surfaceSunken: Color(0xFF161122),
-    textTertiary: Color(0xFF6B6878),
+    splashBackground: BrandColors.splashNavy,
+    scanSurface: Color(0xFF003580),
+    brandSoft: Color(0xFF1A2A4A),
+    onBrandSoft: Color(0xFFB2C5FF),
+    surfaceSunken: Color(0xFF161A22),
+    textTertiary: Color(0xFF737785),
     success: BrandColors.success,
     warning: BrandColors.warning,
-    danger: Color(0xFFFF6B6B),
+    danger: Color(0xFFFFB4AB),
     premium: Color(0xFFF5C451),
+    canvasBackground: Color(0xFF0F1218),
   );
 }

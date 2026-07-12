@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/theme/app_theme.dart';
+import '../../../core/design/app_spacing.dart';
+import '../../../core/design/neu_decorations.dart';
 import '../../scan/presentation/scan_controller.dart';
 import '../domain/entities.dart';
 import 'documents_providers.dart';
@@ -28,7 +31,13 @@ class DocumentListScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Documents')),
+      backgroundColor: context.tokens.canvasBackground,
+      appBar: AppBar(
+        title: Text('All Documents', style: context.text.titleLarge?.copyWith(
+          color: context.colors.primary,
+        )),
+        backgroundColor: context.colors.surface,
+      ),
       body: documentsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Failed to load: $error')),
@@ -50,18 +59,20 @@ class DocumentListScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: scanState.isLoading
             ? null
             : () => _onScanPressed(context, ref),
-        icon: scanState.isLoading
+        backgroundColor: context.colors.primary,
+        foregroundColor: context.colors.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: scanState.isLoading
             ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
-            : const Icon(Icons.document_scanner_outlined),
-        label: const Text('Scan'),
+            : const Icon(Icons.add_a_photo_rounded),
       ),
     );
   }

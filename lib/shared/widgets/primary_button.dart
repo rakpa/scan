@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/design/app_spacing.dart';
 
-/// The primary CTA: a solid, flat dark-purple button. No gradients.
+/// The primary CTA matching Stitch btn-primary — solid blue, 16px radius.
 ///
 /// Includes a built-in busy state (spinner + disabled) per the
 /// `loading-buttons` accessibility rule.
@@ -27,7 +27,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.colors;
     final enabled = onPressed != null && !busy;
-    final radius = BorderRadius.circular(AppRadius.md);
+    final radius = BorderRadius.circular(16);
 
     return Semantics(
       button: true,
