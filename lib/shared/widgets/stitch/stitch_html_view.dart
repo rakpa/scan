@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_web/webview_flutter_web.dart';
 
-import '../../../core/design/stitch_assets.dart';
+// NOTE: Do NOT import 'package:webview_flutter_web/webview_flutter_web.dart' here.
+// That package (and its transitive dep 'web') pull in dart:js_interop / dart:ui_web
+// which are web-only and cause compile errors on iOS/Android builds.
+// Web-specific initialization must be done from main.dart (or a web-only entrypoint).
 
-// Web iframe renderer (srcdoc) — WebView does not paint reliably on Flutter web.
 import 'stitch_html_view_web.dart' if (dart.library.io) 'stitch_html_view_stub.dart';
 
 /// Renders original Stitch HTML (pixel-perfect) with optional tap hotspots.
@@ -140,8 +141,24 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
   }
 }
 
+/// Call this once early in your app (e.g. in main.dart) if you use StitchHtmlView on web.
+/// The actual WebWebViewPlatform registration must live in a file that is only
+/// imported on web (or inside if (kIsWeb) after a conditional import of webview_flutter_web).
 void ensureStitchWebViewInitialized() {
-  if (kIsWeb) {
-    WebViewPlatform.instance = WebWebViewPlatform();
-  }
+  // Web-specific WebViewPlatform setup has been moved out of this file
+  // to prevent pulling web-only packages (webview_flutter_web + web + dart:js_interop*)
+  // into iOS/Android builds.
+  //
+  // Recommended: put the following in your main.dart (or main_web.dart):
+  //
+  // import 'package:flutter/foundation.dart';
+  // import 'package:webview_flutter/webview_flutter.dart';
+  // import 'package:webview_flutter_web/webview_flutter_web.dart' show WebWebViewPlatform;
+  //
+  // void main() {
+  //   if (kIsWeb) {
+  //     WebViewPlatform.instance = WebWebViewPlatform();
+  //   }
+  //   runApp(const MyApp());
+  // }
 }
