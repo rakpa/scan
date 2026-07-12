@@ -115,8 +115,17 @@ platform :ios do
       "--export-options-plist=#{export_plist}"
     )
 
+    # Copy the generated IPA (Flutter outputs Runner.ipa by default) to a predictable name
     sh("mkdir -p ../build/ipa")
-    sh("cp ../build/ios/ipa/*.ipa ../build/ipa/Scanella.ipa")
+
+    ipa_files = Dir['../build/ios/ipa/*.ipa']
+    if ipa_files.empty?
+      UI.user_error!("No .ipa file was found in build/ios/ipa/ after flutter build ipa succeeded")
+    end
+
+    source_ipa = ipa_files.first
+    sh("cp '#{source_ipa}' ../build/ipa/Scanella.ipa")
+    UI.success("Successfully copied IPA to ../build/ipa/Scanella.ipa")
 
     if ENV["UPLOAD_TESTFLIGHT"] == "true"
       upload_to_testflight(
