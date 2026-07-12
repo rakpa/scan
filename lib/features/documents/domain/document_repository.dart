@@ -18,6 +18,12 @@ abstract interface class DocumentRepository {
     String? title,
   });
 
+  /// Appends scanned images as new pages on an existing document.
+  Future<void> appendPagesToDocument(
+    String documentId,
+    List<String> imagePaths,
+  );
+
   Future<void> renameDocument(String id, String title);
 
   /// Marks the document as updated (used after a page is edited/enhanced).

@@ -38,6 +38,25 @@ class ScanController extends AutoDisposeAsyncNotifier<void> {
       return null;
     }
   }
+  /// Launches the scanner and appends captured pages to [documentId].
+  Future<bool> scanAndAppend(String documentId) async {
+    state = const AsyncLoading();
+    try {
+      final paths = await ref.read(documentScannerServiceProvider).scan();
+      if (paths == null || paths.isEmpty) {
+        state = const AsyncData(null);
+        return false;
+      }
+      await ref
+          .read(documentRepositoryProvider)
+          .appendPagesToDocument(documentId, paths);
+      state = const AsyncData(null);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
 }
 
 final scanControllerProvider =

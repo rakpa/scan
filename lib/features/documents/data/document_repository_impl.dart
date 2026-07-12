@@ -91,6 +91,38 @@ class DocumentRepositoryImpl implements DocumentRepository {
   }
 
   @override
+  Future<void> appendPagesToDocument(
+    String documentId,
+    List<String> imagePaths,
+  ) async {
+    if (imagePaths.isEmpty) return;
+    final now = DateTime.now();
+    final existing = await _db.getPages(documentId);
+    final startIndex = existing.length;
+
+    final pageCompanions = <PagesCompanion>[];
+    for (var i = 0; i < imagePaths.length; i++) {
+      final storedPath = await _storage.importPage(
+        documentId: documentId,
+        index: startIndex + i,
+        sourcePath: imagePaths[i],
+      );
+      pageCompanions.add(
+        PagesCompanion.insert(
+          id: _uuid.v4(),
+          documentId: documentId,
+          filePath: storedPath,
+          pageIndex: startIndex + i,
+          createdAt: now,
+        ),
+      );
+    }
+
+    await _db.insertPages(pageCompanions);
+    await _db.touchDocument(documentId);
+  }
+
+  @override
   Future<void> renameDocument(String id, String title) {
     return _db.renameDocument(id, title);
   }

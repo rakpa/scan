@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/design/app_color_tokens.dart';
 import '../../../core/design/app_spacing.dart';
-import '../../../core/design/neu_decorations.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
 /// Launch screen matching Stitch "Splash Screen" — deep navy gradient with logo.

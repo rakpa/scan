@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_theme.dart';
-import '../../../core/design/app_color_tokens.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/stitch/stitch_widgets.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
 class _Slide {
@@ -15,7 +15,7 @@ class _Slide {
     required this.body,
   });
 
-  final String? imageAsset;
+  final String imageAsset;
   final String title;
   final String body;
 }
@@ -27,18 +27,18 @@ const _slides = <_Slide>[
     body: 'Automatically detects and crops your documents perfectly.',
   ),
   _Slide(
-    imageAsset: null,
+    imageAsset: 'assets/images/onboarding_enhance.png',
     title: 'Filter & Enhance',
     body: 'Apply Magic Color, B&W, and brightness adjustments for crisp scans.',
   ),
   _Slide(
-    imageAsset: null,
+    imageAsset: 'assets/images/onboarding_export.png',
     title: 'Export & Share',
     body: 'Create multi-page PDFs and share anywhere in seconds.',
   ),
 ];
 
-/// Onboarding flow matching Stitch "Onboarding - Auto-Crop" layout.
+/// Onboarding — Stitch "Onboarding - Auto-Crop" layout for all slides.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -88,10 +88,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 controller: _controller,
                 onPageChanged: (i) => setState(() => _index = i),
                 itemCount: _slides.length,
-                itemBuilder: (context, i) => _SlideView(slide: _slides[i], index: i),
+                itemBuilder: (context, i) => _SlideView(slide: _slides[i]),
               ),
             ),
-            _Dots(count: _slides.length, index: _index),
+            StitchPageDots(count: _slides.length, index: _index),
             const SizedBox(height: AppSpacing.xl),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -119,9 +119,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _SlideView extends StatelessWidget {
-  const _SlideView({required this.slide, required this.index});
+  const _SlideView({required this.slide});
   final _Slide slide;
-  final int index;
 
   @override
   Widget build(BuildContext context) {
@@ -131,12 +130,7 @@ class _SlideView extends StatelessWidget {
         children: [
           Expanded(
             child: Center(
-              child: slide.imageAsset != null
-                  ? Image.asset(
-                      slide.imageAsset!,
-                      fit: BoxFit.contain,
-                    )
-                  : _FallbackIllustration(index: index),
+              child: Image.asset(slide.imageAsset, fit: BoxFit.contain),
             ),
           ),
           Text(
@@ -159,53 +153,6 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
         ],
       ),
-    );
-  }
-}
-
-class _FallbackIllustration extends StatelessWidget {
-  const _FallbackIllustration({required this.index});
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = index == 1 ? Icons.tune_rounded : Icons.picture_as_pdf_rounded;
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        color: BrandColors.primaryFixed.withValues(alpha: 0.4),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 80, color: BrandColors.primary),
-    );
-  }
-}
-
-class _Dots extends StatelessWidget {
-  const _Dots({required this.count, required this.index});
-  final int count;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (i) {
-        final active = i == index;
-        return AnimatedContainer(
-          duration: AppDuration.base,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          height: 8,
-          width: active ? 24 : 8,
-          decoration: BoxDecoration(
-            color: active
-                ? context.colors.primary
-                : context.colors.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
     );
   }
 }

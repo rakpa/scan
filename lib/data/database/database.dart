@@ -77,6 +77,10 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<void> insertPages(List<PagesCompanion> docPages) {
+    return batch((b) => b.insertAll(pages, docPages));
+  }
+
   Future<void> renameDocument(String id, String title) {
     return (update(documents)..where((d) => d.id.equals(id))).write(
       DocumentsCompanion(

@@ -4,24 +4,32 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/theme/app_theme.dart';
+import '../../../core/design/app_color_tokens.dart';
+import '../../../core/design/app_spacing.dart';
+import '../../../core/design/neu_decorations.dart';
+import '../../../shared/widgets/stitch/stitch_widgets.dart';
 import '../../documents/domain/entities.dart';
 import '../../documents/presentation/documents_providers.dart';
 import '../data/image_processor.dart';
 import '../domain/doc_filter.dart';
 
-/// Per-page enhancement editor: pick a filter, nudge brightness/contrast, and
-/// save back over the page image. Preview generation runs on a background
-/// isolate (see [ImageProcessor]); slider changes are debounced.
+/// Filter & Enhance editor — Stitch design with existing image processing logic.
 class EnhanceScreen extends ConsumerStatefulWidget {
   const EnhanceScreen({
     super.key,
     required this.page,
     required this.documentId,
+    this.pageNumber = 1,
+    this.pageTotal = 1,
   });
 
   final ScanPage page;
   final String documentId;
+  final int pageNumber;
+  final int pageTotal;
 
   @override
   ConsumerState<EnhanceScreen> createState() => _EnhanceScreenState();
@@ -29,18 +37,28 @@ class EnhanceScreen extends ConsumerStatefulWidget {
 
 class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
   DocFilter _filter = DocFilter.original;
-  double _brightness = 0; // slider range -1..1, 0 == neutral
+  double _brightness = 0;
   double _contrast = 0;
 
-  Uint8List? _original; // source bytes, loaded once
-  Uint8List? _preview; // latest processed preview
+  Uint8List? _original;
+  Uint8List? _preview;
   bool _processing = false;
   bool _saving = false;
   Timer? _debounce;
 
-  // Map slider values (-1..1) to multipliers (0.5..1.5) where 1.0 == neutral.
+  static const _carouselFilters = [
+    DocFilter.original,
+    DocFilter.magic,
+    DocFilter.blackWhite,
+    DocFilter.grayscale,
+    DocFilter.auto,
+  ];
+
   double get _brightnessFactor => 1 + _brightness * 0.5;
   double get _contrastFactor => 1 + _contrast * 0.5;
+
+  bool get _hasEdits =>
+      _filter != DocFilter.original || _brightness != 0 || _contrast != 0;
 
   @override
   void initState() {
@@ -54,15 +72,9 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
     super.dispose();
   }
 
-  bool get _hasEdits =>
-      _filter != DocFilter.original || _brightness != 0 || _contrast != 0;
-
   Future<void> _loadOriginal() async {
     final bytes = await File(widget.page.filePath).readAsBytes();
     if (!mounted) return;
-    // Show the captured page instantly. The default filter (Original) with
-    // neutral sliders needs no processing, so we skip the isolate entirely
-    // until the user actually picks a filter or moves a slider.
     setState(() {
       _original = bytes;
       _preview = bytes;
@@ -79,7 +91,7 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
           filter: _filter,
           brightness: _brightnessFactor,
           contrast: _contrastFactor,
-          maxDimension: 1080, // preview resolution — fast to compute & decode
+          maxDimension: 1080,
           quality: 85,
         );
 
@@ -96,7 +108,6 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
   }
 
   void _onAdjustmentChanged() {
-    // Debounce: sliders fire rapidly; only reprocess once they settle briefly.
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 180), _regeneratePreview);
   }
@@ -105,15 +116,13 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
     final source = _original;
     if (source == null || _saving) return;
 
-    // Nothing changed — don't needlessly recompress/overwrite the page.
     if (!_hasEdits) {
-      Navigator.of(context).pop(false);
+      if (mounted) context.pop(false);
       return;
     }
     setState(() => _saving = true);
 
     try {
-      // Re-render at high quality and a larger cap before overwriting.
       final full = await ref.read(imageProcessorProvider).process(
             bytes: source,
             filter: _filter,
@@ -124,8 +133,6 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
           );
       await File(widget.page.filePath).writeAsBytes(full, flush: true);
 
-      // The file path is unchanged, so Flutter's image cache still holds the
-      // old pixels — clear it so the new image shows everywhere.
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
 
@@ -134,7 +141,7 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
       ref.invalidate(documentListProvider);
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      context.pop(true);
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -146,146 +153,224 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Enhance'),
-        actions: [
-          if (_saving)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: _preview == null ? null : _save,
-              child: const Text('Save'),
-            ),
-        ],
-      ),
+      backgroundColor: context.colors.surface,
       body: Column(
         children: [
-          // --- Preview ---
+          StitchTransactionalHeader(
+            title: 'Enhance Scan',
+            subtitle: 'Page ${widget.pageNumber} of ${widget.pageTotal}',
+            onBack: () => context.pop(),
+            actionLabel: 'Done',
+            onAction: _preview == null || _saving ? null : _save,
+            busy: _saving,
+          ),
           Expanded(
-            child: Container(
-              width: double.infinity,
-              color: theme.colorScheme.surfaceContainerHighest,
-              padding: const EdgeInsets.all(16),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_preview != null)
-                    Image.memory(
-                      _preview!,
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true, // avoid flicker between updates
-                    )
-                  else
-                    const CircularProgressIndicator(),
-                  if (_processing && _preview != null)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withValues(alpha: 0.8),
-                          borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Container(
+                decoration: NeuDecorations.card(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_preview != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          _preview!,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
                         ),
-                        child: const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      const CircularProgressIndicator(),
+                    if (_processing && _preview != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // --- Controls ---
-          Material(
-            elevation: 3,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _FilterStrip(
-                      selected: _filter,
-                      onSelected: _onFilterSelected,
-                    ),
-                    _AdjustmentSlider(
-                      icon: Icons.brightness_6_outlined,
-                      label: 'Brightness',
-                      value: _brightness,
-                      onChanged: (v) {
-                        setState(() => _brightness = v);
-                        _onAdjustmentChanged();
-                      },
-                    ),
-                    _AdjustmentSlider(
-                      icon: Icons.contrast_outlined,
-                      label: 'Contrast',
-                      value: _contrast,
-                      onChanged: (v) {
-                        setState(() => _contrast = v);
-                        _onAdjustmentChanged();
-                      },
+                    // Corner crop markers from Stitch design
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CustomPaint(painter: _CropCornerPainter()),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
+          _FilterCarousel(
+            filters: _carouselFilters,
+            selected: _filter,
+            previewBytes: _original,
+            onSelected: _onFilterSelected,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              children: [
+                _SliderRow(
+                  icon: Icons.brightness_6_outlined,
+                  label: 'Brightness',
+                  value: _brightness,
+                  onChanged: (v) {
+                    setState(() => _brightness = v);
+                    _onAdjustmentChanged();
+                  },
+                ),
+                _SliderRow(
+                  icon: Icons.contrast_outlined,
+                  label: 'Contrast',
+                  value: _contrast,
+                  onChanged: (v) {
+                    setState(() => _contrast = v);
+                    _onAdjustmentChanged();
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Horizontal strip of selectable filter chips.
-class _FilterStrip extends StatelessWidget {
-  const _FilterStrip({required this.selected, required this.onSelected});
+class _FilterCarousel extends StatelessWidget {
+  const _FilterCarousel({
+    required this.filters,
+    required this.selected,
+    required this.previewBytes,
+    required this.onSelected,
+  });
 
+  final List<DocFilter> filters;
   final DocFilter selected;
+  final Uint8List? previewBytes;
   final ValueChanged<DocFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: DocFilter.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final filter = DocFilter.values[index];
-          return ChoiceChip(
-            label: Text(filter.label),
-            selected: filter == selected,
-            onSelected: (_) => onSelected(filter),
-          );
-        },
+    return Container(
+      decoration: BoxDecoration(
+        color: context.tokens.surfaceSunken,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            offset: Offset(0, -4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            decoration: BoxDecoration(
+              color: context.colors.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(
+            height: 100,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filters.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, i) {
+                final filter = filters[i];
+                final active = filter == selected;
+                return GestureDetector(
+                  onTap: () => onSelected(filter),
+                  child: Column(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: context.colors.surface,
+                              boxShadow: NeuDecorations.flat(),
+                              border: Border.all(
+                                color: active
+                                    ? context.colors.primary
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: previewBytes != null
+                                  ? Image.memory(previewBytes!, fit: BoxFit.cover)
+                                  : Icon(Icons.image_outlined,
+                                      color: context.colors.onSurfaceVariant),
+                            ),
+                          ),
+                          if (active)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: context.colors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.check,
+                                    size: 14, color: Colors.white),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        filter.label,
+                        style: context.text.labelSmall?.copyWith(
+                          color: active
+                              ? context.colors.primary
+                              : context.colors.onSurfaceVariant,
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
 }
 
-/// A labelled slider for a -1..1 adjustment with a reset-to-centre baseline.
-class _AdjustmentSlider extends StatelessWidget {
-  const _AdjustmentSlider({
+class _SliderRow extends StatelessWidget {
+  const _SliderRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -299,23 +384,64 @@ class _AdjustmentSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          SizedBox(width: 76, child: Text(label)),
-          Expanded(
-            child: Slider(
-              value: value,
-              min: -1,
-              max: 1,
-              onChanged: onChanged,
-            ),
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: context.colors.onSurfaceVariant),
+        const SizedBox(width: 8),
+        SizedBox(width: 72, child: Text(label, style: context.text.bodySmall)),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: -1,
+            max: 1,
+            activeColor: context.colors.primary,
+            onChanged: onChanged,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+}
+
+class _CropCornerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = BrandColors.secondary.withValues(alpha: 0.5)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    const len = 16.0;
+    const inset = 8.0;
+
+    void corner(double x, double y, bool top, bool left) {
+      final path = Path();
+      if (top && left) {
+        path.moveTo(x, y + len);
+        path.lineTo(x, y);
+        path.lineTo(x + len, y);
+      } else if (top && !left) {
+        path.moveTo(x - len, y);
+        path.lineTo(x, y);
+        path.lineTo(x, y + len);
+      } else if (!top && left) {
+        path.moveTo(x, y - len);
+        path.lineTo(x, y);
+        path.lineTo(x + len, y);
+      } else {
+        path.moveTo(x - len, y);
+        path.lineTo(x, y);
+        path.lineTo(x, y - len);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    corner(inset, inset, true, true);
+    corner(size.width - inset, inset, true, false);
+    corner(inset, size.height - inset, false, true);
+    corner(size.width - inset, size.height - inset, false, false);
+  }
+
+  @override
+  bool shouldRepaint(_CropCornerPainter oldDelegate) => false;
 }

@@ -7,186 +7,146 @@ import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_theme.dart';
 import '../../../core/design/app_spacing.dart';
-import '../../../core/design/neu_decorations.dart';
-import '../../scan/presentation/scan_controller.dart';
+import '../../../shared/widgets/stitch/stitch_widgets.dart';
+import '../../shell/presentation/main_shell.dart';
 import '../domain/entities.dart';
 import 'documents_providers.dart';
 
-/// Home screen: a grid of scanned documents with a "Scan" action.
-class DocumentListScreen extends ConsumerWidget {
-  const DocumentListScreen({super.key});
+/// Dashboard "Folders" tab — all documents in Stitch grid layout.
+class DocumentListTab extends ConsumerStatefulWidget {
+  const DocumentListTab({super.key, required this.onScan, this.scanBusy = false});
+
+  final VoidCallback onScan;
+  final bool scanBusy;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final documentsAsync = ref.watch(documentListProvider);
-    final scanState = ref.watch(scanControllerProvider);
+  ConsumerState<DocumentListTab> createState() => _DocumentListTabState();
+}
 
-    // Surface scan errors as a snackbar.
-    ref.listen(scanControllerProvider, (previous, next) {
-      if (next is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: ${next.error}')),
-        );
-      }
-    });
+class _DocumentListTabState extends ConsumerState<DocumentListTab> {
+  String _query = '';
 
-    return Scaffold(
-      backgroundColor: context.tokens.canvasBackground,
-      appBar: AppBar(
-        title: Text('All Documents', style: context.text.titleLarge?.copyWith(
-          color: context.colors.primary,
-        )),
-        backgroundColor: context.colors.surface,
-      ),
-      body: documentsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Failed to load: $error')),
-        data: (documents) {
-          if (documents.isEmpty) {
-            return const _EmptyState();
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 220,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.72,
-            ),
-            itemCount: documents.length,
-            itemBuilder: (context, index) =>
-                _DocumentCard(summary: documents[index]),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: scanState.isLoading
-            ? null
-            : () => _onScanPressed(context, ref),
-        backgroundColor: context.colors.primary,
-        foregroundColor: context.colors.onPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: scanState.isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.add_a_photo_rounded),
-      ),
+  @override
+  Widget build(BuildContext context) {
+    final docsAsync = ref.watch(documentListProvider);
+
+    return Column(
+      children: [
+        StitchDashboardHeader(
+          trailingIcon: Icons.sort_rounded,
+          onTrailing: () {},
+        ),
+        Expanded(
+          child: docsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Failed to load: $e')),
+            data: (docs) {
+              final filtered = docs.where((d) {
+                if (_query.isEmpty) return true;
+                return d.document.title
+                    .toLowerCase()
+                    .contains(_query.toLowerCase());
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return const _EmptyLibrary();
+              }
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  100,
+                ),
+                children: [
+                  StitchSearchBar(
+                    hint: 'Search folders...',
+                    onChanged: (q) => setState(() => _query = q),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'All Documents (${filtered.length})',
+                    style: context.text.titleMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.72,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, i) => _DocCard(summary: filtered[i]),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
-  }
-
-  Future<void> _onScanPressed(BuildContext context, WidgetRef ref) async {
-    final document =
-        await ref.read(scanControllerProvider.notifier).scanAndSave();
-    // Navigate straight into the freshly created document.
-    if (document != null && context.mounted) {
-      context.push('/document/${document.id}');
-    }
   }
 }
 
-class _DocumentCard extends StatelessWidget {
-  const _DocumentCard({required this.summary});
-
+class _DocCard extends StatelessWidget {
+  const _DocCard({required this.summary});
   final DocumentSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final doc = summary.document;
+    final thumb = summary.thumbnailPath;
 
-    return Card(
-      child: InkWell(
-        onTap: () => context.push('/document/${doc.id}'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _Thumbnail(path: summary.thumbnailPath)),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    doc.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${summary.pageCount} page${summary.pageCount == 1 ? '' : 's'} · '
-                    '${DateFormat.MMMd().format(doc.updatedAt)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return StitchScanCard(
+      title: doc.title,
+      subtitle:
+          '${DateFormat.MMMd().format(doc.updatedAt)} · ${summary.pageCount} pg',
+      thumbnail: (thumb != null && File(thumb).existsSync())
+          ? Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 400)
+          : null,
+      onTap: () => context.push('/document/${doc.id}'),
     );
   }
 }
 
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.path});
-
-  final String? path;
+class _EmptyLibrary extends StatelessWidget {
+  const _EmptyLibrary();
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    if (path == null || !File(path!).existsSync()) {
-      return Container(
-        color: colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.image_not_supported_outlined,
-            color: colorScheme.onSurfaceVariant),
-      );
-    }
-    return Image.file(
-      File(path!),
-      fit: BoxFit.cover,
-      // Decode at a reduced resolution for list performance.
-      cacheWidth: 400,
-      errorBuilder: (_, __, ___) => Container(
-        color: colorScheme.surfaceContainerHighest,
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.document_scanner_outlined,
-                size: 72, color: theme.colorScheme.primary),
+            Icon(Icons.folder_open_rounded,
+                size: 48, color: context.colors.primary),
             const SizedBox(height: 16),
-            Text('No documents yet', style: theme.textTheme.titleMedium),
+            Text('No documents yet', style: context.text.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'Tap Scan to capture your first document.',
+              'Tap the camera button to scan your first document.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: context.text.bodyMedium,
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Standalone library route — opens shell on Folders tab.
+class DocumentListScreen extends StatelessWidget {
+  const DocumentListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainShell(initialTab: 1);
   }
 }
