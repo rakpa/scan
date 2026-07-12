@@ -8,6 +8,64 @@ default_platform(:ios)
 
 APP_ID = ENV["BUNDLE_ID"] || "com.scanella.mobile"
 CERT_EXPORT_PASSWORD = ENV["IOS_DIST_CERT_PASSWORD"] || "scan-ci-export"
+# Apple allows at most 2 distribution certs per team. CI runners never have the
+# private key for portal certs created on other machines, so cert() always tries
+# to mint a new identity unless IOS_DIST_CERT_P12_BASE64 is provided.
+APPLE_DISTRIBUTION_CERT_LIMIT = 2
+
+def connect_api_token
+  @connect_api_token ||= Spaceship::ConnectAPI::Token.create(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    filepath: ENV["API_KEY_PATH"]
+  )
+end
+
+def fetch_distribution_certificates
+  connect_api_token
+  Spaceship::ConnectAPI.token = connect_api_token
+
+  %w[IOS_DISTRIBUTION DISTRIBUTION APPLE_DISTRIBUTION].flat_map do |cert_type|
+    Spaceship::ConnectAPI::Certificate.all(filter: { certificateType: cert_type })
+  end.uniq(&:id)
+rescue StandardError => e
+  UI.user_error!(
+    "Could not list distribution certificates via App Store Connect API: #{e.message}. " \
+    "Check ASC_KEY_ID, ASC_ISSUER_ID, and ASC_KEY_P8."
+  )
+end
+
+def revoke_distribution_certificates_for_ci!
+  return if ENV["IOS_DIST_CERT_P12_BASE64"].to_s.strip.length.positive?
+  return unless ENV.fetch("IOS_AUTO_REVOKE_STALE_CERTS", "true") == "true"
+
+  UI.message("No IOS_DIST_CERT_P12_BASE64 secret - ensuring room for a fresh distribution cert...")
+  certs = fetch_distribution_certificates
+
+  certs.reject(&:valid?).each do |cert|
+    UI.important("Revoking expired distribution certificate #{cert.id} (#{cert.display_name})")
+    cert.delete!
+  end
+
+  active = fetch_distribution_certificates.select(&:valid?)
+  while active.length >= APPLE_DISTRIBUTION_CERT_LIMIT
+    oldest = active.min_by { |cert| cert.expiration_date.to_s }
+    UI.important(
+      "Revoking distribution certificate #{oldest.id} (#{oldest.display_name}) " \
+      "because the Apple account is at the #{APPLE_DISTRIBUTION_CERT_LIMIT}-cert limit " \
+      "and this runner does not have the private key."
+    )
+    oldest.delete!
+    active = fetch_distribution_certificates.select(&:valid?)
+  end
+
+  if active.any?
+    UI.important(
+      "#{active.length} distribution certificate(s) remain on your Apple account. " \
+      "fastlane will create a new one if the private key is not on this runner."
+    )
+  end
+end
 
 platform :ios do
   desc "Build and export a signed App Store IPA"
@@ -30,6 +88,7 @@ platform :ios do
     p12_secret = ENV["IOS_DIST_CERT_P12_BASE64"].to_s.strip
     if p12_secret.length.positive?
       UI.message("Importing distribution certificate from IOS_DIST_CERT_P12_BASE64 secret...")
+      install_wwdr_certificate
       p12_path = File.expand_path("imported_dist.p12")
       File.binwrite(p12_path, Base64.decode64(p12_secret))
       import_certificate(
@@ -39,17 +98,35 @@ platform :ios do
         keychain_password: keychain_password
       )
     else
-      UI.important(
-        "No IOS_DIST_CERT_P12_BASE64 secret - requesting cert from Apple. " \
-        "If this fails with 'maximum certificates', revoke orphaned Distribution certs at " \
-        "developer.apple.com -> Certificates, then re-run."
-      )
-      cert(
-        api_key: api_key,
-        keychain_path: keychain_db,
-        keychain_password: keychain_password,
-        force: false
-      )
+      revoke_distribution_certificates_for_ci!
+      install_wwdr_certificate
+      begin
+        cert(
+          api_key: api_key,
+          keychain_path: keychain_db,
+          keychain_password: keychain_password,
+          force: false
+        )
+      rescue StandardError => e
+        unless e.message.include?("maximum number of available Distribution certificates")
+          raise
+        end
+
+        UI.important(
+          "Apple still reports the distribution cert limit. " \
+          "Revoking all active distribution certificates and retrying once..."
+        )
+        fetch_distribution_certificates.select(&:valid?).each do |cert|
+          UI.important("Revoking distribution certificate #{cert.id} (#{cert.display_name})")
+          cert.delete!
+        end
+        cert(
+          api_key: api_key,
+          keychain_path: keychain_db,
+          keychain_password: keychain_password,
+          force: false
+        )
+      end
       # Export for the user to save as GitHub secret so future runs reuse this cert.
       # The ci-signing keychain holds exactly one identity (just created), so
       # export everything - `security export` takes no identity argument.
@@ -65,10 +142,14 @@ platform :ios do
         "security export -k '#{keychain_db}' -t identities -f pkcs12 " \
         "-P '#{CERT_EXPORT_PASSWORD}' -o '#{export_path}'"
       )
+      encoded = Base64.strict_encode64(File.binread(export_path))
       UI.success(
-        "Exported dist_cert.p12 - download the ios-dist-cert artifact and add " \
-        "IOS_DIST_CERT_P12_BASE64 + IOS_DIST_CERT_PASSWORD secrets to avoid hitting Apple's cert limit."
+        "Exported dist_cert.p12 (password: #{CERT_EXPORT_PASSWORD}). " \
+        "Download the ios-dist-cert artifact, then add GitHub secrets " \
+        "IOS_DIST_CERT_P12_BASE64 and IOS_DIST_CERT_PASSWORD=#{CERT_EXPORT_PASSWORD} " \
+        "so future runs reuse this cert instead of creating new ones."
       )
+      UI.message("IOS_DIST_CERT_P12_BASE64 length for secret: #{encoded.length} chars")
     end
 
     sigh(api_key: api_key, app_identifier: APP_ID, platform: "ios")

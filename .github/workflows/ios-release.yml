@@ -81,6 +81,8 @@ jobs:
           FASTLANE_DISABLE_COLORS: '1'
           IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          # When no P12 secret is set, revoke stale portal certs so cert() can mint one.
+          IOS_AUTO_REVOKE_STALE_CERTS: 'true'
 
       - name: Upload distribution cert backup (first run only)
         if: success()
