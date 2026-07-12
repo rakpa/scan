@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 40
     env:
-      BUNDLE_ID: com.rakpa.scanly
+      BUNDLE_ID: com.scanella.mobile
     steps:
       - uses: actions/checkout@v4
 

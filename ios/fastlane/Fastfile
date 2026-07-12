@@ -5,7 +5,7 @@
 
 default_platform(:ios)
 
-APP_ID = ENV["BUNDLE_ID"] || "com.rakpa.scanly"
+APP_ID = ENV["BUNDLE_ID"] || "com.scanella.mobile"
 
 platform :ios do
   desc "Build and export a signed App Store IPA"
