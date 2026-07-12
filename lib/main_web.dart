@@ -35,9 +35,24 @@ class _WebPreviewApp extends StatelessWidget {
       title: 'ScanMaster AI preview',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.light,
       routerConfig: _webRouter,
+      builder: (context, child) {
+        return ColoredBox(
+          color: const Color(0xFF1a1a1a),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 390),
+              child: AspectRatio(
+                aspectRatio: 780 / 1768,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
