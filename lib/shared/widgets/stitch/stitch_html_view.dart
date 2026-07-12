@@ -8,6 +8,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 // which are web-only and cause compile errors on iOS/Android builds.
 // Web-specific initialization must be done from main.dart (or a web-only entrypoint).
 
+import '../../../core/design/stitch_assets.dart';
+
 import 'stitch_html_view_web.dart' if (dart.library.io) 'stitch_html_view_stub.dart';
 
 /// Renders original Stitch HTML (pixel-perfect) with optional tap hotspots.
