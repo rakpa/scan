@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_theme.dart';
 import '../../../core/design/app_color_tokens.dart';
 import '../../../core/design/app_spacing.dart';
 import '../../../core/design/neu_decorations.dart';
 
-/// Stitch Dashboard header — logo title + optional trailing action.
+/// Stitch Dashboard header â€” logo title + optional trailing action.
 class StitchDashboardHeader extends StatelessWidget {
   const StitchDashboardHeader({
     super.key,
@@ -38,7 +38,7 @@ class StitchDashboardHeader extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'ScanMaster AI',
+              'Scanella',
               style: context.text.titleLarge?.copyWith(
                 color: context.colors.primary,
                 fontWeight: FontWeight.w600,
@@ -397,7 +397,7 @@ class StitchTransactionalHeader extends StatelessWidget {
   }
 }
 
-/// Stitch FAB — rounded square camera button.
+/// Stitch FAB â€” rounded square camera button.
 class StitchScanFab extends StatelessWidget {
   const StitchScanFab({super.key, required this.onTap, this.busy = false});
 
@@ -516,3 +516,4 @@ class StitchPageDots extends StatelessWidget {
     );
   }
 }
+

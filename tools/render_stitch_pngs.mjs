@@ -1,6 +1,6 @@
-/**
- * Renders full-resolution PNGs from Stitch HTML exports (780×1768+).
- * Stitch API thumbnails are ~226×512 and look blurry when scaled up.
+﻿/**
+ * Renders full-resolution PNGs from Stitch HTML exports (780Ã—1768+).
+ * Stitch API thumbnails are ~226Ã—512 and look blurry when scaled up.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +18,7 @@ const exportDir = path.join(
 const outDir = path.join(repoRoot, 'assets', 'stitch');
 
 const titleToFile = {
-  'ScanMaster AI Premium Logo': '01_logo.png',
+  'Scanella Premium Logo': '01_logo.png',
   'Splash Screen': '00_splash.png',
   'Onboarding - Auto-Crop': '02_onboarding_auto_crop.png',
   'Smart Capture': '03_smart_capture.png',
@@ -79,8 +79,9 @@ for (const entry of manifest) {
 
   await page.close();
   const stat = fs.statSync(outPath);
-  console.log(`Rendered ${outName} (${width}×${height} canvas, ${Math.round(stat.size / 1024)} KB)`);
+  console.log(`Rendered ${outName} (${width}Ã—${height} canvas, ${Math.round(stat.size / 1024)} KB)`);
 }
 
 await browser.close();
 console.log(`\nDone. Assets written to ${outDir}`);
+

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
-/// Extra design tokens that don't fit Material's [ColorScheme] — brand surfaces,
-/// neumorphic canvas, and semantic colors from the ScanMaster AI Stitch design.
+/// Extra design tokens that don't fit Material's [ColorScheme] â€” brand surfaces,
+/// neumorphic canvas, and semantic colors from the Scanella Stitch design.
 @immutable
 class AppTokens extends ThemeExtension<AppTokens> {
   const AppTokens({
@@ -191,3 +191,4 @@ abstract final class AppPalette {
     canvasBackground: Color(0xFF0F1218),
   );
 }
+

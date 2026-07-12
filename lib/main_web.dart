@@ -244,7 +244,7 @@ class _WebPreviewApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'ScanMaster AI preview',
+      title: 'Scanella preview',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: _webRouter,
@@ -271,3 +271,4 @@ class _WebPreviewApp extends StatelessWidget {
     );
   }
 }
+

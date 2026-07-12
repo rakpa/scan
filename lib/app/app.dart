@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'router/app_router.dart';
@@ -16,7 +16,7 @@ class DocScannerApp extends ConsumerWidget {
     final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
-      title: 'ScanMaster AI',
+      title: 'Scanella',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
@@ -25,3 +25,4 @@ class DocScannerApp extends ConsumerWidget {
     );
   }
 }
+
