@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +49,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     .moveY(begin: 10, end: 0, curve: Curves.easeOut),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Scanly',
+                  'Scanella',
                   style: context.text.displaySmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -83,3 +83,4 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 }
+

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Rect;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -18,7 +19,13 @@ class ExportController extends AutoDisposeAsyncNotifier<void> {
   FutureOr<void> build() {}
 
   /// Builds a PDF for [document] and opens the system share sheet.
-  Future<void> exportAndShare(ScanDocument document) async {
+  ///
+  /// [sharePositionOrigin] anchors the iOS/iPadOS share sheet — required on
+  /// those platforms or share_plus throws a PlatformException.
+  Future<void> exportAndShare(
+    ScanDocument document, {
+    Rect? sharePositionOrigin,
+  }) async {
     state = const AsyncLoading();
     try {
       final pages =
@@ -33,6 +40,7 @@ class ExportController extends AutoDisposeAsyncNotifier<void> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'application/pdf')],
         subject: document.title,
+        sharePositionOrigin: sharePositionOrigin,
       );
       state = const AsyncData(null);
     } catch (error, stackTrace) {

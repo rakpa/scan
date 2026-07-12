@@ -83,9 +83,17 @@ class DocumentDetailScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: (document == null || exportState.isLoading)
             ? null
-            : () => ref
-                .read(exportControllerProvider.notifier)
-                .exportAndShare(document),
+            : () {
+                // Anchor the share sheet — required on iOS/iPadOS or
+                // share_plus throws (sharePositionOrigin must be set).
+                final box = context.findRenderObject() as RenderBox?;
+                final origin = (box != null && box.hasSize)
+                    ? box.localToGlobal(Offset.zero) & box.size
+                    : const Rect.fromLTWH(0, 0, 1, 1);
+                ref
+                    .read(exportControllerProvider.notifier)
+                    .exportAndShare(document, sharePositionOrigin: origin);
+              },
         icon: exportState.isLoading
             ? const SizedBox(
                 width: 18,

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,8 +9,8 @@ import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'features/paywall/presentation/paywall_screen.dart';
 import 'features/splash/presentation/splash_screen.dart';
 
-/// Web-only entry point for previewing the design (splash → onboarding →
-/// paywall → home layout) in a browser.
+/// Web-only entry point for previewing the design (splash â†’ onboarding â†’
+/// paywall â†’ home layout) in a browser.
 ///
 /// It deliberately avoids the native, DB-backed routes (real home, document
 /// detail, enhance) which depend on `dart:io`/drift and can't compile for web.
@@ -18,7 +18,7 @@ import 'features/splash/presentation/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Preview-only: reset onboarding each load so a reload always shows the full
-  // startup flow (splash → onboarding → paywall → home).
+  // startup flow (splash â†’ onboarding â†’ paywall â†’ home).
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
   runApp(const ProviderScope(child: _WebPreviewApp()));
@@ -40,7 +40,7 @@ class _WebPreviewApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Scanly preview',
+      title: 'Scanella preview',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
@@ -49,3 +49,4 @@ class _WebPreviewApp extends StatelessWidget {
     );
   }
 }
+
