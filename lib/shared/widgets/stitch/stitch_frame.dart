@@ -4,7 +4,7 @@ import '../../../core/design/stitch_assets.dart';
 
 /// Renders a full Stitch PNG screenshot with optional percentage-based hotspots.
 ///
-/// The image is letterboxed to preserve the exact Stitch layout on any device.
+/// Images are exported at 2× (1560px wide) from Stitch HTML for sharp display.
 class StitchFrame extends StatelessWidget {
   const StitchFrame({
     super.key,
@@ -35,6 +35,8 @@ class StitchFrame extends StatelessWidget {
                   asset,
                   fit: fit,
                   alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                  isAntiAlias: true,
                   gaplessPlayback: true,
                   errorBuilder: (context, error, stack) => Center(
                     child: Text(

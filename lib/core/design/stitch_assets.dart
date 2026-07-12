@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Sequential Stitch screen PNGs (pixel-perfect design reference).
 abstract final class StitchAssets {
+  static const String splash = 'assets/stitch/00_splash.png';
   static const String logo = 'assets/stitch/01_logo.png';
   static const String onboardingAutoCrop = 'assets/stitch/02_onboarding_auto_crop.png';
   static const String smartCapture = 'assets/stitch/03_smart_capture.png';
@@ -24,6 +25,7 @@ abstract final class StitchAssets {
 
   /// Full sequential order matching the Stitch export (01→11).
   static const allScreens = [
+    splash,
     logo,
     onboardingAutoCrop,
     smartCapture,

@@ -33,10 +33,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF001847),
       body: StitchFrame(
-        asset: StitchAssets.logo,
+        asset: StitchAssets.splash,
         backgroundColor: const Color(0xFF001847),
-        fit: BoxFit.contain,
-      )
+      ),
     );
   }
 }
