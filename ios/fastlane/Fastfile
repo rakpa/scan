@@ -51,7 +51,8 @@ platform :ios do
       configuration: "Release",
       export_method: "app-store",
       output_directory: "../build/ipa",
-      output_name: "Scanly.ipa",
+      output_name: "ScanMaster.ipa",
+      xcargs: "FLUTTER_BUILD_NUMBER=#{ENV['BUILD_NUMBER']} FLUTTER_BUILD_NAME=1.0.0 CURRENT_PROJECT_VERSION=#{ENV['BUILD_NUMBER']}",
       export_options: {
         signingStyle: "manual",
         teamID: ENV["TEAM_ID"],
@@ -60,7 +61,7 @@ platform :ios do
     )
 
     if ENV["UPLOAD_TESTFLIGHT"] == "true"
-      upload_to_testflight(api_key: api_key, ipa: "../build/ipa/Scanly.ipa",
+      upload_to_testflight(api_key: api_key, ipa: "../build/ipa/ScanMaster.ipa",
                            skip_waiting_for_build_processing: true)
     end
   end

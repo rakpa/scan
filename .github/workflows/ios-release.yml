@@ -62,8 +62,13 @@ jobs:
           printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
           echo "API_KEY_PATH=$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
 
-      - name: Pre-build (bakes build number, runs pod install)
-        run: flutter build ios --release --no-codesign --build-number=${BUILD_NUMBER} --build-name=1.0.0
+      - name: Prepare iOS (CocoaPods, no codesign)
+        run: |
+          flutter precache --ios
+          cd ios && pod install --repo-update
+
+      - name: Install fastlane
+        run: gem install fastlane --no-document
 
       - name: Build & sign IPA (fastlane)
         working-directory: ios
@@ -73,7 +78,7 @@ jobs:
           FASTLANE_DISABLE_COLORS: '1'
 
       - name: Upload .ipa artifact
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
