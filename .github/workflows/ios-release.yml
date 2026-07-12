@@ -62,10 +62,12 @@ jobs:
           printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
           echo "API_KEY_PATH=$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
 
-      - name: Prepare iOS (CocoaPods, no codesign)
+      - name: Prepare Flutter for Xcode (macOS paths)
         run: |
           flutter precache --ios
-          cd ios && pod install --repo-update
+          FLUTTER_ROOT="$(dirname "$(dirname "$(command -v flutter)")")"
+          echo "export FLUTTER_ROOT=\"$FLUTTER_ROOT\"" > ios/.xcode.env.local
+          echo 'export PATH="$FLUTTER_ROOT/bin:$PATH"' >> ios/.xcode.env.local
 
       - name: Install fastlane
         run: gem install fastlane --no-document
