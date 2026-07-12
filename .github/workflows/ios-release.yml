@@ -1,7 +1,8 @@
 # Signed App Store .ipa for the Flutter app — built entirely on CI (no Mac).
 #
 # Repo secrets (same values across all your apps): APPLE_TEAM_ID, ASC_KEY_ID,
-# ASC_ISSUER_ID, ASC_KEY_P8. The App Store Connect API key must have App Manager role.
+# ASC_ISSUER_ID, ASC_KEY_P8. Optional after first successful build:
+# IOS_DIST_CERT_P12_BASE64, IOS_DIST_CERT_PASSWORD (reuse cert, avoid Apple limit).
 name: iOS Release (signed IPA)
 
 on:
@@ -78,6 +79,16 @@ jobs:
         env:
           FASTLANE_SKIP_UPDATE_CHECK: '1'
           FASTLANE_DISABLE_COLORS: '1'
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+
+      - name: Upload distribution cert backup (first run only)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-dist-cert
+          path: build/dist_cert.p12
+          if-no-files-found: ignore
 
       - name: Upload .ipa artifact
         if: success()

@@ -1,9 +1,13 @@
 # fastlane release lane for the Flutter app on CI.
-# cert + sigh via App Store Connect API, then `flutter build ipa` (handles Dart compile/assets).
+# Reuses a stored distribution cert (GitHub secret) to avoid Apple's 2–3 cert limit.
+# cert + sigh via App Store Connect API, then `flutter build ipa`.
+
+require "base64"
 
 default_platform(:ios)
 
 APP_ID = ENV["BUNDLE_ID"] || "com.scanella.mobile"
+CERT_EXPORT_PASSWORD = ENV["IOS_DIST_CERT_PASSWORD"] || "scan-ci-export"
 
 platform :ios do
   desc "Build and export a signed App Store IPA"
@@ -23,7 +27,45 @@ platform :ios do
       default_keychain: true, unlock: true, timeout: 3600, lock_when_sleeps: false
     )
 
-    cert(api_key: api_key, keychain_path: keychain_db, keychain_password: keychain_password)
+    p12_secret = ENV["IOS_DIST_CERT_P12_BASE64"].to_s.strip
+    if p12_secret.length.positive?
+      UI.message("Importing distribution certificate from IOS_DIST_CERT_P12_BASE64 secret...")
+      p12_path = File.expand_path("imported_dist.p12")
+      File.binwrite(p12_path, Base64.decode64(p12_secret))
+      import_certificate(
+        certificate_path: p12_path,
+        certificate_password: ENV["IOS_DIST_CERT_PASSWORD"],
+        keychain_name: keychain_name,
+        keychain_password: keychain_password
+      )
+    else
+      UI.important(
+        "No IOS_DIST_CERT_P12_BASE64 secret — requesting cert from Apple. " \
+        "If this fails with 'maximum certificates', revoke orphaned Distribution certs at " \
+        "developer.apple.com → Certificates, then re-run."
+      )
+      cert(
+        api_key: api_key,
+        keychain_path: keychain_db,
+        keychain_password: keychain_password,
+        force: false
+      )
+      # Export for the user to save as GitHub secret so future runs reuse this cert.
+      export_path = File.expand_path("../build/dist_cert.p12")
+      sh("mkdir -p ../build")
+      export_certificate(
+        keychain_path: keychain_db,
+        keychain_password: keychain_password,
+        type: "distribution",
+        path: export_path,
+        password: CERT_EXPORT_PASSWORD
+      )
+      UI.success(
+        "Exported dist_cert.p12 — download the ios-dist-cert artifact and add " \
+        "IOS_DIST_CERT_P12_BASE64 + IOS_DIST_CERT_PASSWORD secrets to avoid hitting Apple's cert limit."
+      )
+    end
+
     sigh(api_key: api_key, app_identifier: APP_ID, platform: "ios")
     profile_name = lane_context[SharedValues::SIGH_NAME]
 
@@ -61,7 +103,6 @@ platform :ios do
       PLIST
     )
 
-    # Flutter owns the Xcode build scripts (Dart compile, assets, icons).
     sh(
       "cd .. && flutter build ipa --release " \
       "--build-number=#{ENV['BUILD_NUMBER']} --build-name=1.0.0 " \
