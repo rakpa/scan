@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/design/stitch_assets.dart';
 import '../../../core/design/stitch_screens.dart';
 import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../scan/presentation/scan_controller.dart';
