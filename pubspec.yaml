@@ -43,8 +43,10 @@ dependencies:
   uuid: ^4.5.1
   intl: ^0.19.0
   webview_flutter: ^4.14.1
-  webview_flutter_web: ^0.2.3+4
-  web: ^1.1.1
+
+  # NOTE: webview_flutter_web and web are NOT listed here.
+  # They are brought in automatically by webview_flutter when building for web.
+  # Directly depending on them causes 'dart:js_interop' / 'dart:ui_web' compile errors on iOS/Android.
 
 dev_dependencies:
   flutter_test:
