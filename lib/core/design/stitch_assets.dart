@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 /// Sequential Stitch screen PNGs (pixel-perfect design reference).
 abstract final class StitchAssets {
   static const String splash = 'assets/stitch/00_splash.png';
+  static const String splashIcon = 'assets/stitch/splash_icon.png';
   static const String logo = 'assets/stitch/01_logo.png';
   static const String onboardingAutoCrop = 'assets/stitch/02_onboarding_auto_crop.png';
   static const String smartCapture = 'assets/stitch/03_smart_capture.png';
