@@ -88,7 +88,6 @@ platform :ios do
     p12_secret = ENV["IOS_DIST_CERT_P12_BASE64"].to_s.strip
     if p12_secret.length.positive?
       UI.message("Importing distribution certificate from IOS_DIST_CERT_P12_BASE64 secret...")
-      install_wwdr_certificate
       p12_path = File.expand_path("imported_dist.p12")
       File.binwrite(p12_path, Base64.decode64(p12_secret))
       import_certificate(
@@ -99,7 +98,6 @@ platform :ios do
       )
     else
       revoke_distribution_certificates_for_ci!
-      install_wwdr_certificate
       begin
         cert(
           api_key: api_key,
