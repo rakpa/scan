@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_web/webview_flutter_web.dart';
 
-import '../../../core/design/stitch_screens.dart';
 import '../../../core/design/stitch_assets.dart';
 
 // Web iframe renderer (srcdoc) — WebView does not paint reliably on Flutter web.
@@ -33,7 +32,6 @@ class StitchHtmlView extends StatefulWidget {
 
 class _StitchHtmlViewState extends State<StitchHtmlView> {
   WebViewController? _controller;
-  String? _html;
   String? _webViewType;
   var _loading = true;
 
@@ -60,7 +58,6 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
       final viewType = await registerStitchHtmlIframe(html);
       if (!mounted) return;
       setState(() {
-        _html = html;
         _webViewType = viewType;
         _controller = null;
         _loading = false;
@@ -83,7 +80,6 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
 
     if (!mounted) return;
     setState(() {
-      _html = html;
       _controller = controller;
       _webViewType = null;
     });
@@ -95,29 +91,22 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
       color: widget.backgroundColor,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final scale = constraints.maxWidth / StitchScreens.designWidth;
-
-          Widget content = Stack(
+          // The Stitch exports are responsive mobile pages (viewport meta,
+          // dvh heights, centred max-width) — render them at the widget's own
+          // size like a phone browser. No Transform.scale: Flutter transforms
+          // don't apply to platform views (iframes/WebViews), which showed up
+          // as a "cropped" top-left corner on web.
+          return Stack(
             fit: StackFit.expand,
             children: [
-              ClipRect(
-                child: Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    width: StitchScreens.designWidth,
-                    height: StitchScreens.designHeight,
-                    child: kIsWeb && _webViewType != null
-                        ? StitchHtmlIframe(viewType: _webViewType!)
-                        : _controller != null
-                            ? IgnorePointer(
-                                ignoring: !widget.interactive,
-                                child: WebViewWidget(controller: _controller!),
-                              )
-                            : const SizedBox.shrink(),
-                  ),
-                ),
-              ),
+              kIsWeb && _webViewType != null
+                  ? StitchHtmlIframe(viewType: _webViewType!)
+                  : _controller != null
+                      ? IgnorePointer(
+                          ignoring: !widget.interactive,
+                          child: WebViewWidget(controller: _controller!),
+                        )
+                      : const SizedBox.shrink(),
               if (_loading)
                 const Center(
                   child: SizedBox(
@@ -145,8 +134,6 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
               }),
             ],
           );
-
-          return content;
         },
       ),
     );
