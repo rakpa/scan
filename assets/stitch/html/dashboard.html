@@ -2,7 +2,7 @@
 
 <html lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>ScanMaster AI - Dashboard</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -129,7 +129,20 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="text-on-surface font-body-md min-h-screen flex flex-col pb-[80px] md:pb-0">
 <!-- TopAppBar (Hidden on desktop if Drawer was present, but keeping as general header for mobile/tablet focus as requested) -->
 <header class="w-full top-0 sticky z-40 bg-surface shadow-[4px_4px_8px_rgba(0,0,0,0.05),-4px_-4px_4px_rgba(255,255,255,1)]">

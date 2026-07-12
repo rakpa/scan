@@ -2,7 +2,7 @@
 
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>ScanMaster AI - Dashboard</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;display=swap" rel="stylesheet"/>
@@ -112,7 +112,20 @@
             background: linear-gradient(135deg, #4f46e5 0%, #57dffe 100%);
         }
     </style>
-</head>
+<style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="bg-surface text-on-surface font-body-md antialiased min-h-screen pb-24 md:pb-0">
 <!-- TopAppBar -->
 <header class="bg-surface/95 dark:bg-surface-container-highest/95 backdrop-blur-md docked full-width top-0 sticky z-50 border-b border-outline-variant/10 shadow-[0px_4px_12px_rgba(79,70,229,0.05)] flex justify-between items-center px-container-margin h-16 w-full">

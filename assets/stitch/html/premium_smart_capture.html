@@ -2,7 +2,7 @@
 
 <html lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Smart Capture - ScanMaster AI</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
@@ -226,7 +226,20 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="bg-black text-on-surface h-screen overflow-hidden font-body-md selection:bg-secondary-container selection:text-on-secondary-container relative">
 <!-- Camera View (Simulated Background) -->
 <div class="absolute inset-0 z-0 bg-gray-900">

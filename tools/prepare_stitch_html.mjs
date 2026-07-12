@@ -44,11 +44,26 @@ function patchHtml(html) {
     const dataUri = `data:image/png;base64,${b64}`;
     out = out.split(brokenLogoUrl).join(dataUri);
   }
-  // Ensure mobile viewport width matches Stitch canvas.
+  // Lock canvas to Stitch mobile frame (780×1768) so h-screen/flex layouts fill correctly.
   out = out.replace(
-    'width=device-width, initial-scale=1.0',
-    'width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+    /content="width=device-width[^"]*"/g,
+    'content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"',
   );
+  const fitStyle = `<style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style>`;
+  out = out.replace('</head>', `${fitStyle}</head>`);
   return out;
 }
 

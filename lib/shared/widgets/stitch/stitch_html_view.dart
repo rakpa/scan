@@ -100,23 +100,24 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
           Widget content = Stack(
             fit: StackFit.expand,
             children: [
-              if (kIsWeb && _webViewType != null)
-                ClipRect(
-                  child: Transform.scale(
-                    scale: scale,
-                    alignment: Alignment.topLeft,
-                    child: SizedBox(
-                      width: StitchScreens.designWidth,
-                      height: StitchScreens.designHeight,
-                      child: StitchHtmlIframe(viewType: _webViewType!),
-                    ),
+              ClipRect(
+                child: Transform.scale(
+                  scale: scale,
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: StitchScreens.designWidth,
+                    height: StitchScreens.designHeight,
+                    child: kIsWeb && _webViewType != null
+                        ? StitchHtmlIframe(viewType: _webViewType!)
+                        : _controller != null
+                            ? IgnorePointer(
+                                ignoring: !widget.interactive,
+                                child: WebViewWidget(controller: _controller!),
+                              )
+                            : const SizedBox.shrink(),
                   ),
-                )
-              else if (_controller != null)
-                IgnorePointer(
-                  ignoring: !widget.interactive,
-                  child: WebViewWidget(controller: _controller!),
                 ),
+              ),
               if (_loading)
                 const Center(
                   child: SizedBox(

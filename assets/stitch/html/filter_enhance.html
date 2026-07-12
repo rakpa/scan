@@ -2,7 +2,7 @@
 
 <html lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>ScanMaster AI - Filter &amp; Enhancement</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -128,7 +128,20 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="bg-background text-on-surface h-screen flex flex-col font-body-md overflow-hidden">
 <!-- TopAppBar (Task-Focused: Suppress normal nav, show Close/Done) -->
 <header class="w-full top-0 sticky bg-surface flex justify-between items-center px-md py-sm z-50 shadow-neumorphic-level-1 shrink-0">

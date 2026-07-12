@@ -2,7 +2,7 @@
 
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Settings - ScanMaster AI</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -125,7 +125,20 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="bg-[#F5F5F7] text-on-surface font-body-lg min-h-screen pb-24 md:pb-0 selection:bg-primary-container selection:text-on-primary-container">
 <!-- TopAppBar -->
 <header class="bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed font-headline-md text-headline-md-mobile w-full top-0 sticky shadow-[4px_4px_8px_rgba(0,0,0,0.05),-4px_-4px_4px_rgba(255,255,255,1)] dark:shadow-none flex justify-between items-center px-md py-sm w-full z-40">

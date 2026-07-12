@@ -249,17 +249,20 @@ class _WebPreviewApp extends StatelessWidget {
       theme: AppTheme.light(),
       routerConfig: _webRouter,
       builder: (context, child) {
+        final size = MediaQuery.sizeOf(context);
+        // Fill most of the browser window — not a tiny 390px mockup.
+        final frameHeight = (size.height * 0.92).clamp(640.0, 920.0);
+        final frameWidth = frameHeight * (StitchScreens.designWidth / StitchScreens.designHeight);
+
         return ColoredBox(
           color: const Color(0xFF1a1a1a),
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 390),
-              child: AspectRatio(
-                aspectRatio: 780 / 1768,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: child ?? const SizedBox.shrink(),
-                ),
+            child: SizedBox(
+              width: frameWidth,
+              height: frameHeight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: child ?? const SizedBox.shrink(),
               ),
             ),
           ),

@@ -2,7 +2,7 @@
 
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=780, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="width=780, height=1768, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>ScanMaster AI - Smart Capture</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
@@ -182,7 +182,20 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head>
+  <style id="stitch-flutter-fit">
+    html, body {
+      width: 780px !important;
+      height: 1768px !important;
+      min-height: 1768px !important;
+      max-height: 1768px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+    .h-screen, main.h-screen, [class*="h-screen"] {
+      height: 1768px !important;
+      min-height: 1768px !important;
+    }
+  </style></head>
 <body class="relative w-full h-full text-on-surface">
 <!-- Simulated Camera Feed -->
 <div class="absolute inset-0 camera-feed" data-alt="A top-down view of a modern wooden desk. A crisp white paper document with text is placed slightly off-center. Soft natural daylight illuminates the desk, casting gentle shadows. A minimalist pen and a small succulent plant are partially visible at the edges. The scene suggests a professional, organized workspace ready for document scanning."></div>
