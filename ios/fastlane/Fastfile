@@ -108,10 +108,11 @@ platform :ios do
       PLIST
     )
 
+    build_number = ENV['BUILD_NUMBER'] || '1'
     sh(
       "cd .. && flutter build ipa --release " \
-      "--build-number=#{ENV['BUILD_NUMBER']} --build-name=1.0.0 " \
-      "--export-options-plist=ios/ExportOptions.plist"
+      "--build-number=#{build_number} --build-name=1.0.0 " \
+      "--export-options-plist=#{export_plist}"
     )
 
     sh("mkdir -p ../build/ipa")
