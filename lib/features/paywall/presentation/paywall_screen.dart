@@ -13,6 +13,7 @@ class PaywallScreen extends ConsumerWidget {
   Future<void> _finish(BuildContext context, WidgetRef ref) async {
     final store = await ref.read(onboardingStoreProvider.future);
     await store.markComplete();
+    await store.unlockPremium();
     if (context.mounted) context.go('/home');
   }
 

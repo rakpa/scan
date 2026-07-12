@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
 import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../onboarding/data/onboarding_store.dart';
 import '../../scan/presentation/scan_controller.dart';
 
 /// Main shell — Stitch Dashboard PNG with scan FAB + bottom-nav hotspots.
@@ -52,6 +53,10 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final scanState = ref.watch(scanControllerProvider);
+    final premium = ref.watch(onboardingStoreProvider).maybeWhen(
+          data: (store) => store.premiumUnlocked,
+          orElse: () => false,
+        );
 
     ref.listen(scanControllerProvider, (prev, next) {
       if (next is AsyncError) {
@@ -68,7 +73,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           fit: StackFit.expand,
           children: [
             StitchFrame(
-              asset: StitchAssets.smartCapture,
+              asset: StitchAssets.smartCaptureFor(premium: premium),
               backgroundColor: Colors.black,
               fit: BoxFit.cover,
             ),

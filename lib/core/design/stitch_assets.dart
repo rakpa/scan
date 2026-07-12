@@ -22,6 +22,7 @@ abstract final class StitchAssets {
     documentExport,
   ];
 
+  /// Full sequential order matching the Stitch export (01→11).
   static const allScreens = [
     logo,
     onboardingAutoCrop,
@@ -35,6 +36,12 @@ abstract final class StitchAssets {
     premiumSmartCapture,
     premiumDocumentExport,
   ];
+
+  static String smartCaptureFor({required bool premium}) =>
+      premium ? premiumSmartCapture : smartCapture;
+
+  static String documentExportFor({required bool premium}) =>
+      premium ? premiumDocumentExport : documentExport;
 }
 
 /// Percentage-based tap region on a Stitch screenshot (0.0–1.0).

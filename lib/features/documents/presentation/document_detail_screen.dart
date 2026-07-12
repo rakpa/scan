@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/stitch_assets.dart';
 import '../../../shared/widgets/stitch/stitch_frame.dart';
+import '../../onboarding/data/onboarding_store.dart';
 import '../../export/presentation/export_controller.dart';
 import '../../scan/presentation/scan_controller.dart';
 import '../domain/entities.dart';
@@ -31,6 +32,10 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
     final summariesAsync = ref.watch(documentListProvider);
     final exportState = ref.watch(exportControllerProvider);
     final scanState = ref.watch(scanControllerProvider);
+    final premium = ref.watch(onboardingStoreProvider).maybeWhen(
+          data: (store) => store.premiumUnlocked,
+          orElse: () => false,
+        );
 
     final document = summariesAsync.maybeWhen(
       data: (summaries) {
@@ -97,7 +102,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
             fit: StackFit.expand,
             children: [
               StitchFrame(
-                asset: StitchAssets.documentExport,
+                asset: StitchAssets.documentExportFor(premium: premium),
                 backgroundColor: const Color(0xFFF9F9FB),
                 overlay: previewOverlay,
                 hotspots: [

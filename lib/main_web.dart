@@ -24,10 +24,18 @@ final _webRouter = GoRouter(
     GoRoute(path: '/onboarding', builder: (c, s) => const OnboardingScreen()),
     GoRoute(path: '/paywall', builder: (c, s) => const PaywallScreen()),
     GoRoute(path: '/home', builder: (c, s) => const _WebMainShell()),
+    GoRoute(
+      path: '/document/demo',
+      builder: (c, s) => const _WebDocumentDemo(),
+    ),
+    GoRoute(
+      path: '/document/demo/enhance',
+      builder: (c, s) => const _WebEnhanceDemo(),
+    ),
   ],
 );
 
-/// Web-only dashboard preview — Stitch PNGs, no native DB/scan imports.
+/// Web-only shell — all Stitch PNGs, scan flow simulated without native DB.
 class _WebMainShell extends StatefulWidget {
   const _WebMainShell();
 
@@ -37,26 +45,47 @@ class _WebMainShell extends StatefulWidget {
 
 class _WebMainShellState extends State<_WebMainShell> {
   int _tab = 0;
+  bool _scanning = false;
+  bool _premium = false;
 
-  String get _asset => _tab == 3 ? StitchAssets.settings : StitchAssets.dashboard;
+  String get _asset => switch (_tab) {
+        3 => StitchAssets.settings,
+        _ => StitchAssets.dashboard,
+      };
+
+  Future<void> _scan() async {
+    setState(() => _scanning = true);
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    setState(() => _scanning = false);
+    context.push('/document/demo');
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_scanning) {
+      return Scaffold(
+        body: StitchFrame(
+          asset: StitchAssets.smartCaptureFor(premium: _premium),
+          backgroundColor: Colors.black,
+        ),
+      );
+    }
+
     return Scaffold(
       body: StitchFrame(
         asset: _asset,
         backgroundColor: const Color(0xFFF5F5F7),
         hotspots: [
-          StitchHotspot(
-            left: 0.72,
-            top: 0.78,
-            width: 0.22,
-            height: 0.12,
-            semanticLabel: 'Scan',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Scanning runs on the installed app.')),
+          if (_tab <= 1)
+            StitchHotspot(
+              left: 0.72,
+              top: 0.78,
+              width: 0.22,
+              height: 0.12,
+              semanticLabel: 'Scan',
+              onTap: _scan,
             ),
-          ),
           for (var i = 0; i < 4; i++)
             StitchHotspot(
               left: 0.02 + i * 0.24,
@@ -64,6 +93,138 @@ class _WebMainShellState extends State<_WebMainShell> {
               width: 0.22,
               height: 0.09,
               onTap: () => setState(() => _tab = i),
+            ),
+          if (_tab == 0)
+            StitchHotspot(
+              left: 0.82,
+              top: 0.045,
+              width: 0.14,
+              height: 0.07,
+              semanticLabel: 'Settings',
+              onTap: () => setState(() => _tab = 3),
+            ),
+          if (_tab == 3)
+            StitchHotspot(
+              left: 0.05,
+              top: 0.12,
+              width: 0.9,
+              height: 0.12,
+              semanticLabel: 'Unlock premium',
+              onTap: () => setState(() => _premium = true),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebDocumentDemo extends StatefulWidget {
+  const _WebDocumentDemo();
+
+  @override
+  State<_WebDocumentDemo> createState() => _WebDocumentDemoState();
+}
+
+class _WebDocumentDemoState extends State<_WebDocumentDemo> {
+  bool _appending = false;
+
+  Future<void> _addPage() async {
+    setState(() => _appending = true);
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (mounted) setState(() => _appending = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          StitchFrame(
+            asset: StitchAssets.premiumDocumentExport,
+            backgroundColor: const Color(0xFFF9F9FB),
+            hotspots: [
+              StitchHotspot(
+                left: 0.02,
+                top: 0.04,
+                width: 0.12,
+                height: 0.07,
+                semanticLabel: 'Back',
+                onTap: () => context.pop(),
+              ),
+              StitchHotspot(
+                left: 0.02,
+                top: 0.88,
+                width: 0.18,
+                height: 0.1,
+                semanticLabel: 'Add page',
+                onTap: _addPage,
+              ),
+              StitchHotspot(
+                left: 0.22,
+                top: 0.88,
+                width: 0.18,
+                height: 0.1,
+                semanticLabel: 'Enhance',
+                onTap: () => context.push('/document/demo/enhance'),
+              ),
+              StitchHotspot(
+                left: 0.32,
+                top: 0.86,
+                width: 0.36,
+                height: 0.12,
+                semanticLabel: 'Export PDF',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Export runs on the installed app.')),
+                ),
+              ),
+            ],
+          ),
+          if (_appending)
+            StitchFrame(
+              asset: StitchAssets.perspectiveCrop,
+              backgroundColor: Colors.black87,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebEnhanceDemo extends StatelessWidget {
+  const _WebEnhanceDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: StitchFrame(
+        asset: StitchAssets.filterEnhance,
+        backgroundColor: const Color(0xFFF9F9FB),
+        hotspots: [
+          StitchHotspot(
+            left: 0.02,
+            top: 0.04,
+            width: 0.12,
+            height: 0.07,
+            semanticLabel: 'Cancel',
+            onTap: () => context.pop(),
+          ),
+          StitchHotspot(
+            left: 0.78,
+            top: 0.04,
+            width: 0.18,
+            height: 0.07,
+            semanticLabel: 'Done',
+            onTap: () => context.pop(),
+          ),
+          for (var i = 0; i < 5; i++)
+            StitchHotspot(
+              left: 0.06 + i * 0.17,
+              top: 0.72,
+              width: 0.14,
+              height: 0.14,
+              semanticLabel: 'Filter $i',
+              onTap: () {},
             ),
         ],
       ),

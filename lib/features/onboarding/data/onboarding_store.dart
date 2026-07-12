@@ -5,12 +5,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OnboardingStore {
   OnboardingStore(this._prefs);
 
-  static const _key = 'onboarding_complete_v3';
+  static const _completeKey = 'onboarding_complete_v3';
+  static const _premiumKey = 'premium_unlocked_v1';
   final SharedPreferences _prefs;
 
-  bool get isComplete => _prefs.getBool(_key) ?? false;
+  bool get isComplete => _prefs.getBool(_completeKey) ?? false;
 
-  Future<void> markComplete() => _prefs.setBool(_key, true);
+  bool get premiumUnlocked => _prefs.getBool(_premiumKey) ?? false;
+
+  Future<void> markComplete() => _prefs.setBool(_completeKey, true);
+
+  Future<void> unlockPremium() => _prefs.setBool(_premiumKey, true);
 }
 
 /// Async singleton — resolved once at startup.

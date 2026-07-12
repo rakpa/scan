@@ -12,7 +12,7 @@ class StitchFrame extends StatelessWidget {
     this.hotspots = const [],
     this.overlay,
     this.backgroundColor = Colors.black,
-    this.fit = BoxFit.contain,
+    this.fit = BoxFit.cover,
   });
 
   final String asset;
@@ -30,13 +30,19 @@ class StitchFrame extends StatelessWidget {
           return Stack(
             fit: StackFit.expand,
             children: [
-              Center(
+              Positioned.fill(
                 child: Image.asset(
                   asset,
                   fit: fit,
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
                   alignment: Alignment.center,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stack) => Center(
+                    child: Text(
+                      'Missing: $asset',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
               ),
               if (overlay != null) Positioned.fill(child: overlay!),
