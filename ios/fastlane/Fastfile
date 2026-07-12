@@ -3,11 +3,22 @@
 # cert + sigh via App Store Connect API, then `flutter build ipa`.
 
 require "base64"
+require "fileutils"
+require "shellwords"
 
 default_platform(:ios)
 
+FASTLANE_DIR = __dir__
+IOS_DIR = File.expand_path("..", FASTLANE_DIR)
+PROJECT_ROOT = File.expand_path("..", IOS_DIR)
+BUILD_DIR = File.join(PROJECT_ROOT, "build")
+FLUTTER_IPA_DIR = File.join(BUILD_DIR, "ios", "ipa")
+ARTIFACT_IPA_DIR = File.join(BUILD_DIR, "ipa")
+DIST_CERT_PATH = File.join(BUILD_DIR, "dist_cert.p12")
+
 APP_ID = ENV["BUNDLE_ID"] || "com.scanella.mobile"
-CERT_EXPORT_PASSWORD = ENV["IOS_DIST_CERT_PASSWORD"] || "scan-ci-export"
+CERT_EXPORT_PASSWORD = ENV["IOS_DIST_CERT_PASSWORD"].to_s.strip
+CERT_EXPORT_PASSWORD = "scan-ci-export" if CERT_EXPORT_PASSWORD.empty?
 # Apple allows at most 2 distribution certs per team. CI runners never have the
 # private key for portal certs created on other machines, so cert() always tries
 # to mint a new identity unless IOS_DIST_CERT_P12_BASE64 is provided.
@@ -88,11 +99,11 @@ platform :ios do
     p12_secret = ENV["IOS_DIST_CERT_P12_BASE64"].to_s.strip
     if p12_secret.length.positive?
       UI.message("Importing distribution certificate from IOS_DIST_CERT_P12_BASE64 secret...")
-      p12_path = File.expand_path("imported_dist.p12")
+      p12_path = File.join(FASTLANE_DIR, "imported_dist.p12")
       File.binwrite(p12_path, Base64.decode64(p12_secret))
       import_certificate(
         certificate_path: p12_path,
-        certificate_password: ENV["IOS_DIST_CERT_PASSWORD"],
+        certificate_password: CERT_EXPORT_PASSWORD,
         keychain_name: keychain_name,
         keychain_password: keychain_password
       )
@@ -126,10 +137,7 @@ platform :ios do
         )
       end
       # Export for the user to save as GitHub secret so future runs reuse this cert.
-      # The ci-signing keychain holds exactly one identity (just created), so
-      # export everything - `security export` takes no identity argument.
-      export_path = File.expand_path("../build/dist_cert.p12")
-      sh("mkdir -p ../build")
+      FileUtils.mkdir_p(BUILD_DIR)
       found = sh(
         "security find-identity -v -p codesigning '#{keychain_db}' " \
         "| grep -c 'Apple Distribution' || true",
@@ -138,9 +146,10 @@ platform :ios do
       UI.user_error!("No Apple Distribution identity found in keychain") if found == "0"
       sh(
         "security export -k '#{keychain_db}' -t identities -f pkcs12 " \
-        "-P '#{CERT_EXPORT_PASSWORD}' -o '#{export_path}'"
+        "-P #{Shellwords.escape(CERT_EXPORT_PASSWORD)} " \
+        "-o #{Shellwords.escape(DIST_CERT_PATH)}"
       )
-      encoded = Base64.strict_encode64(File.binread(export_path))
+      encoded = Base64.strict_encode64(File.binread(DIST_CERT_PATH))
       UI.success(
         "Exported dist_cert.p12 (password: #{CERT_EXPORT_PASSWORD}). " \
         "Download the ios-dist-cert artifact, then add GitHub secrets " \
@@ -154,7 +163,7 @@ platform :ios do
     profile_name = lane_context[SharedValues::SIGH_NAME]
 
     update_code_signing_settings(
-      path: "Runner.xcodeproj",
+      path: File.join(IOS_DIR, "Runner.xcodeproj"),
       use_automatic_signing: false,
       team_id: ENV["TEAM_ID"],
       bundle_identifier: APP_ID,
@@ -163,7 +172,7 @@ platform :ios do
       targets: ["Runner"]
     )
 
-    export_plist = File.expand_path("ExportOptions.plist")
+    export_plist = File.join(FASTLANE_DIR, "ExportOptions.plist")
     File.write(
       export_plist,
       <<~PLIST,
@@ -187,29 +196,29 @@ platform :ios do
       PLIST
     )
 
-    build_number = ENV['BUILD_NUMBER'] || '1'
+    build_number = ENV["BUILD_NUMBER"] || "1"
     sh(
-      "cd .. && flutter build ipa --release " \
+      "cd #{Shellwords.escape(PROJECT_ROOT)} && flutter build ipa --release " \
       "--build-number=#{build_number} --build-name=1.0.0 " \
-      "--export-options-plist=#{export_plist}"
+      "--export-options-plist=#{Shellwords.escape(export_plist)}"
     )
 
-    # Copy the generated IPA (Flutter outputs Runner.ipa by default) to a predictable name
-    sh("mkdir -p ../build/ipa")
-
-    ipa_files = Dir['../build/ios/ipa/*.ipa']
+    ipa_files = Dir[File.join(FLUTTER_IPA_DIR, "*.ipa")]
     if ipa_files.empty?
-      UI.user_error!("No .ipa file was found in build/ios/ipa/ after flutter build ipa succeeded")
+      UI.user_error!(
+        "No .ipa file was found in #{FLUTTER_IPA_DIR} after flutter build ipa succeeded"
+      )
     end
 
-    source_ipa = ipa_files.first
-    sh("cp '#{source_ipa}' ../build/ipa/Scanella.ipa")
-    UI.success("Successfully copied IPA to ../build/ipa/Scanella.ipa")
+    FileUtils.mkdir_p(ARTIFACT_IPA_DIR)
+    dest_ipa = File.join(ARTIFACT_IPA_DIR, "Scanella.ipa")
+    FileUtils.cp(ipa_files.first, dest_ipa)
+    UI.success("Successfully copied IPA to #{dest_ipa}")
 
     if ENV["UPLOAD_TESTFLIGHT"] == "true"
       upload_to_testflight(
         api_key: api_key,
-        ipa: "../build/ipa/Scanella.ipa",
+        ipa: dest_ipa,
         skip_waiting_for_build_processing: true
       )
     end
