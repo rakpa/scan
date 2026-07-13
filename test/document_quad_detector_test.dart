@@ -155,6 +155,59 @@ void main() {
     _expectCornersClose(result!.corners, corners, w, h, tolerancePx: 9);
   });
 
+  test('detects a document that fills most of the frame', () {
+    // The border ring lies mostly ON the document here — region-based
+    // background estimation fails; only edge-based detection works.
+    final corners = [
+      const Offset(10, 8),
+      const Offset(150, 10),
+      const Offset(148, 112),
+      const Offset(8, 110),
+    ];
+    final lum = _renderQuad(
+      width: w,
+      height: h,
+      corners: corners,
+      background: 70,
+      fill: 205,
+    );
+
+    final result = detector.detect(lum, w, h);
+    expect(result, isNotNull);
+    _expectCornersClose(result!.corners, corners, w, h, tolerancePx: 8);
+  });
+
+  test('detects a document on a textured background', () {
+    final corners = [
+      const Offset(34, 24),
+      const Offset(126, 28),
+      const Offset(122, 96),
+      const Offset(30, 90),
+    ];
+    final lum = _renderQuad(
+      width: w,
+      height: h,
+      corners: corners,
+      background: 90,
+      fill: 210,
+    );
+    // Wood-grain-like background texture: ±25 luminance stripes outside the
+    // document (leaves the interior untouched).
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final i = y * w + x;
+        if (lum[i] != 210) {
+          final stripe = ((x + y * 2) % 9) < 4 ? 25 : -25;
+          lum[i] = (lum[i] + stripe).clamp(0, 255);
+        }
+      }
+    }
+
+    final result = detector.detect(lum, w, h);
+    expect(result, isNotNull);
+    _expectCornersClose(result!.corners, corners, w, h, tolerancePx: 9);
+  });
+
   test('orderCorners sorts arbitrary point order into TL/TR/BR/BL', () {
     final ordered = DocumentQuadDetector.orderCorners([
       const Offset(0.9, 0.8), // BR
