@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,14 +33,17 @@ class ScanScreen extends ConsumerStatefulWidget {
 }
 
 class _ScanScreenState extends ConsumerState<ScanScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _pulseController;
   Timer? _detectionTimer;
+  Timer? _focusRingTimer;
+  Offset? _focusPoint;
   var _saving = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -60,9 +64,47 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _detectionTimer?.cancel();
+    _focusRingTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  /// Release the camera in background and restore it on return — otherwise
+  /// the preview comes back frozen (or the camera stays locked for other apps).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (kIsWeb) return;
+    final notifier = ref.read(scanSessionProvider.notifier);
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      notifier.suspendCamera();
+    } else if (state == AppLifecycleState.resumed) {
+      notifier.resumeCamera();
+    }
+  }
+
+  Future<void> _focusAt(Offset local, Size previewSize) async {
+    final camera = ref.read(scanSessionProvider.notifier).cameraController;
+    if (camera == null || !camera.value.isInitialized) return;
+
+    final point = Offset(
+      (local.dx / previewSize.width).clamp(0.0, 1.0),
+      (local.dy / previewSize.height).clamp(0.0, 1.0),
+    );
+    setState(() => _focusPoint = local);
+    _focusRingTimer?.cancel();
+    _focusRingTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _focusPoint = null);
+    });
+
+    try {
+      await camera.setFocusPoint(point);
+      await camera.setExposurePoint(point);
+    } catch (_) {
+      // Some devices don't support focus/exposure points — the tap is a no-op.
+    }
   }
 
   void _showError(String message) {
@@ -183,6 +225,67 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     );
   }
 
+  /// Sizes the preview to the camera buffer in display orientation so the
+  /// normalized quad coordinates from detection map 1:1 onto the pixels.
+  Widget _previewBox(
+    BuildContext context,
+    CameraController camera,
+    Widget overlay,
+  ) {
+    final buffer = camera.value.previewSize ?? const Size(720, 1280);
+    final portrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final shortSide = buffer.shortestSide;
+    final longSide = buffer.longestSide;
+    final size = Size(
+      portrait ? shortSide : longSide,
+      portrait ? longSide : shortSide,
+    );
+    return SizedBox(
+      width: size.width,
+      height: size.height,
+      child: CameraPreview(
+        camera,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) => _focusAt(details.localPosition, size),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              overlay,
+              if (_focusPoint != null)
+                Positioned(
+                  left: _focusPoint!.dx - 32,
+                  top: _focusPoint!.dy - 32,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ScanDesign.guideBlue,
+                          width: 2,
+                        ),
+                      ),
+                    )
+                        .animate(key: ValueKey(_focusPoint))
+                        .scale(
+                          begin: const Offset(1.3, 1.3),
+                          end: const Offset(1, 1),
+                          duration: 220.ms,
+                          curve: Curves.easeOutCubic,
+                        )
+                        .fadeIn(duration: 120.ms),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -227,7 +330,30 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         fit: StackFit.expand,
         children: [
           if (session.cameraReady && camera != null && camera.value.isInitialized)
-            CameraPreview(camera)
+            // Preview and edge overlay share one coordinate space: the overlay
+            // is a child of CameraPreview inside a cover-fitted box, so the
+            // detected quad lands exactly on the document the camera sees.
+            SizedBox.expand(
+              child: ClipRect(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  clipBehavior: Clip.hardEdge,
+                  child: _previewBox(
+                    context,
+                    camera,
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, _) => ScanEdgeOverlay(
+                        quad: quad,
+                        confidence: session.confidence,
+                        pulse:
+                            session.waitingForNextPage ? 0 : _pulseController.value,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
           else if (session.cameraError != null)
             Center(
               child: Padding(
@@ -242,16 +368,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
           else
             const Center(
               child: CircularProgressIndicator(color: ScanDesign.primary),
-            ),
-
-          if (session.cameraReady)
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, _) => ScanEdgeOverlay(
-                quad: quad,
-                confidence: session.confidence,
-                pulse: session.waitingForNextPage ? 0 : _pulseController.value,
-              ),
             ),
 
           if (session.waitingForNextPage && previewPath != null)
@@ -330,7 +446,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 capturing: session.isCapturing,
                 waitingForNextPage: session.waitingForNextPage,
                 hintText: session.waitingForNextPage
-                    ? 'Adjust this page, then tap Next Page'
+                    ? 'Swap to the next page to continue, or adjust filters'
                     : 'Align document inside the frame',
                 onNextPage: session.waitingForNextPage
                     ? () {

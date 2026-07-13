@@ -6,15 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/design/stitch_assets.dart';
-import '../../../core/design/stitch_screens.dart';
-import '../../../shared/widgets/stitch/stitch_html_view.dart';
 import '../../documents/domain/entities.dart';
 import '../../documents/presentation/documents_providers.dart';
+import '../../scan/presentation/scan_design_tokens.dart';
 import '../data/image_processor.dart';
 import '../domain/doc_filter.dart';
 
-/// Filter & Enhance — Stitch PNG with live filter preview overlay.
+/// Native page editor — live filter preview plus brightness/contrast sliders.
 class EnhanceScreen extends ConsumerStatefulWidget {
   const EnhanceScreen({
     super.key,
@@ -51,6 +49,14 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
     DocFilter.grayscale,
     DocFilter.auto,
   ];
+
+  static const _filterIcons = {
+    DocFilter.original: Icons.image_outlined,
+    DocFilter.magic: Icons.auto_fix_high_rounded,
+    DocFilter.blackWhite: Icons.filter_b_and_w_rounded,
+    DocFilter.grayscale: Icons.gradient_rounded,
+    DocFilter.auto: Icons.auto_awesome_outlined,
+  };
 
   double get _brightnessFactor => 1 + _brightness * 0.5;
   double get _contrastFactor => 1 + _contrast * 0.5;
@@ -101,6 +107,7 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
   }
 
   void _onFilterSelected(DocFilter filter) {
+    if (filter == _filter) return;
     setState(() => _filter = filter);
     _regeneratePreview();
   }
@@ -108,6 +115,17 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
   void _onAdjustmentChanged() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 180), _regeneratePreview);
+  }
+
+  void _reset() {
+    setState(() {
+      _filter = DocFilter.original;
+      _brightness = 0;
+      _contrast = 0;
+      _preview = _original;
+      _processing = false;
+    });
+    _debounce?.cancel();
   }
 
   Future<void> _save() async {
@@ -151,85 +169,234 @@ class _EnhanceScreenState extends ConsumerState<EnhanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filterIndex = _carouselFilters.indexOf(_filter).clamp(0, 4);
-
-    Widget? previewOverlay;
-    if (_preview != null) {
-      previewOverlay = LayoutBuilder(
-        builder: (context, c) {
-          return Center(
-            child: Padding(
-              padding: EdgeInsets.only(
-                top: c.maxHeight * 0.14,
-                bottom: c.maxHeight * 0.32,
-                left: c.maxWidth * 0.1,
-                right: c.maxWidth * 0.1,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1117),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+              child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(_preview!, fit: BoxFit.contain, gaplessPlayback: true),
+                  IconButton(
+                    onPressed: _saving ? null : () => context.pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    color: ScanDesign.onDark,
                   ),
-                  if (_processing)
-                    const CircularProgressIndicator(strokeWidth: 2),
+                  Expanded(
+                    child: Text(
+                      'Page ${widget.pageNumber} of ${widget.pageTotal}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: ScanDesign.onDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _saving ? null : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ScanDesign.onDark,
+                            ),
+                          )
+                        : const Text(
+                            'Save',
+                            style: TextStyle(
+                              color: ScanDesign.primaryLight,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),
-          );
-        },
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FB),
-      body: StitchHtmlView(
-        htmlAsset: StitchScreens.filterEnhance,
-        backgroundColor: const Color(0xFFF9F9FB),
-        interactive: false,
-        overlay: previewOverlay,
-        hotspots: [
-          StitchHotspot(
-            left: 0.02,
-            top: 0.04,
-            width: 0.12,
-            height: 0.07,
-            semanticLabel: 'Cancel',
-            onTap: () => context.pop(),
-          ),
-          StitchHotspot(
-            left: 0.78,
-            top: 0.04,
-            width: 0.18,
-            height: 0.07,
-            semanticLabel: 'Done',
-            onTap: _saving ? () {} : _save,
-          ),
-          // Filter carousel taps (5 filters across bottom strip)
-          for (var i = 0; i < 5; i++)
-            StitchHotspot(
-              left: 0.06 + i * 0.17,
-              top: 0.72,
-              width: 0.14,
-              height: 0.14,
-              semanticLabel: _carouselFilters[i].label,
-              onTap: () => _onFilterSelected(_carouselFilters[i]),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_preview != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          _preview!,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      )
+                    else
+                      const CircularProgressIndicator(
+                        color: ScanDesign.primaryLight,
+                      ),
+                    if (_processing)
+                      const Positioned(
+                        top: 12,
+                        right: 12,
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: ScanDesign.onDark,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          // Brightness slider region
-          StitchHotspot(
-            left: 0.1,
-            top: 0.88,
-            width: 0.8,
-            height: 0.04,
-            semanticLabel: 'Brightness',
-            onTap: () {
-              setState(() => _brightness = (_brightness + 0.25).clamp(-1.0, 1.0));
-              _onAdjustmentChanged();
-            },
-          ),
-        ],
+            SizedBox(
+              height: 84,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _carouselFilters.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final filter = _carouselFilters[index];
+                  final selected = filter == _filter;
+                  return GestureDetector(
+                    onTap: () => _onFilterSelected(filter),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 76,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? ScanDesign.primary.withValues(alpha: 0.22)
+                            : Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selected
+                              ? ScanDesign.primaryLight
+                              : Colors.white24,
+                          width: selected ? 1.6 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _filterIcons[filter],
+                            size: 24,
+                            color: selected
+                                ? ScanDesign.primaryLight
+                                : ScanDesign.onDarkMuted,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            filter.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                              color: selected
+                                  ? ScanDesign.onDark
+                                  : ScanDesign.onDarkMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Column(
+                children: [
+                  _AdjustmentSlider(
+                    icon: Icons.light_mode_outlined,
+                    label: 'Brightness',
+                    value: _brightness,
+                    onChanged: (v) {
+                      setState(() => _brightness = v);
+                      _onAdjustmentChanged();
+                    },
+                  ),
+                  _AdjustmentSlider(
+                    icon: Icons.contrast_rounded,
+                    label: 'Contrast',
+                    value: _contrast,
+                    onChanged: (v) {
+                      setState(() => _contrast = v);
+                      _onAdjustmentChanged();
+                    },
+                  ),
+                  if (_hasEdits)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _saving ? null : _reset,
+                        icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                        label: const Text('Reset'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: ScanDesign.onDarkMuted,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _AdjustmentSlider extends StatelessWidget {
+  const _AdjustmentSlider({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: ScanDesign.onDarkMuted),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: -1,
+            max: 1,
+            activeColor: ScanDesign.primaryLight,
+            inactiveColor: Colors.white24,
+            label: label,
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 36,
+          child: Text(
+            (value * 100).round().toString(),
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              color: ScanDesign.onDarkMuted,
+              fontSize: 12,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -35,6 +35,7 @@ class DocumentEdgeTracker {
   var _lowConfidenceTicks = 0;
   var _nextPageRequested = false;
   var _documentLeftFrame = false;
+  var _missedFrames = 0;
 
   DocumentQuad get quad => _quad;
   ScanDetectionPhase get phase => _phase;
@@ -66,13 +67,28 @@ class DocumentEdgeTracker {
   }
 
   /// Feed live detection from [CameraFrameAnalyzer] (preferred over simulation).
+  ///
+  /// [detected] is null when the frame contained no document — the tracker
+  /// then decays confidence and eases the guide back to the mode frame
+  /// instead of freezing on a stale quad.
   void updateFromFrame({
-    required DocumentQuad detected,
+    required DocumentQuad? detected,
     required double frameConfidence,
   }) {
     _hasFrameFeed = true;
-    _quad = _quad.lerp(detected, 0.42);
-    _confidence = frameConfidence;
+    if (detected != null) {
+      _missedFrames = 0;
+      _quad = _quad.lerp(detected, 0.45);
+      _confidence = _confidence * 0.4 + frameConfidence * 0.6;
+    } else {
+      _missedFrames++;
+      _confidence *= 0.72;
+      if (_missedFrames >= 4) {
+        // Document is gone — settle back onto the centered guide frame.
+        _quad = _quad.lerp(_target, 0.18);
+        if (_missedFrames >= 12) _confidence = 0;
+      }
+    }
   }
 
   void lockAfterCapture(DocumentQuad capturedAt) {
@@ -108,6 +124,13 @@ class DocumentEdgeTracker {
   }
 
   void _unlockAutoCapture() {
+    // In batch scanning the next page often sits exactly where the last one
+    // was; once the previous sheet demonstrably left the frame, stop treating
+    // that position as a duplicate.
+    if (_documentLeftFrame) {
+      _lastAutoCaptureQuad = null;
+      _lastAutoCaptureAt = null;
+    }
     _clearAutoCaptureLock();
     _stability = 0;
     _phase = ScanDetectionPhase.looking;

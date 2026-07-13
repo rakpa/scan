@@ -110,16 +110,23 @@ class PremiumSearchBar extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Voice search coming soon.')),
-              );
-            },
-            icon: Icon(Icons.mic_rounded, color: HomeDesign.secondary, size: 20),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
+          if (controller != null)
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller!,
+              builder: (context, value, _) => value.text.isEmpty
+                  ? const SizedBox.shrink()
+                  : IconButton(
+                      onPressed: () {
+                        controller!.clear();
+                        onChanged?.call('');
+                      },
+                      icon: Icon(Icons.close_rounded, color: muted, size: 20),
+                      tooltip: 'Clear search',
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+            ),
         ],
       ),
     );

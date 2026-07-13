@@ -121,15 +121,8 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
               style: HomeTypography.appTitle,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications coming soon.')),
-              );
-            },
-            icon: const Icon(Icons.notifications_none_rounded, color: HomeDesign.onSurface),
-            tooltip: 'Notifications',
-          ),
+          // Balances the leading menu button so the title stays centered.
+          const SizedBox(width: 48),
         ],
       ),
     ).animate().fadeIn(duration: 280.ms);

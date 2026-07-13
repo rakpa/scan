@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 
 import '../../../app/router/app_router.dart';
 import '../../export/presentation/export_controller.dart';
@@ -108,7 +109,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Created $created · ${pages.length} ${pages.length == 1 ? 'page' : 'pages'} · OCR pending',
+                              'Created $created · ${pages.length} ${pages.length == 1 ? 'page' : 'pages'}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: HomeDesign.mutedOf(context),
@@ -285,23 +286,11 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.copy_all_outlined),
-              title: const Text('Duplicate'),
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Duplicate coming soon.')),
-                );
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.print_outlined),
               title: const Text('Print'),
               onTap: () {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Print coming soon.')),
-                );
+                _print(summary.document);
               },
             ),
             ListTile(
@@ -343,6 +332,27 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
     final pages =
         await ref.read(documentPagesProvider(widget.documentId).future);
     if (mounted) setState(() => _pageIndex = pages.length - 1);
+  }
+
+  Future<void> _print(ScanDocument document) async {
+    try {
+      final pages =
+          await ref.read(documentRepositoryProvider).getPages(document.id);
+      if (pages.isEmpty) return;
+      final file = await ref
+          .read(pdfExportServiceProvider)
+          .buildPdf(document: document, pages: pages);
+      final bytes = await file.readAsBytes();
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        name: document.title,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Print failed: $e')),
+      );
+    }
   }
 
   void _export(BuildContext context, WidgetRef ref, ScanDocument? document) {

@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../enhance/data/image_processor.dart';
+import '../../settings/presentation/settings_providers.dart';
 import '../data/camera_frame_analyzer.dart';
 import '../data/camera_scan_service.dart';
 import '../data/document_edge_tracker.dart';
@@ -135,6 +136,11 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
 
   Future<void> initializeCamera() async {
     try {
+      // Respect the user's persisted auto-capture preference for new sessions.
+      final autoCaptureDefault = _ref.read(autoCaptureDefaultProvider);
+      if (state.autoCapture != autoCaptureDefault) {
+        state = state.copyWith(autoCapture: autoCaptureDefault);
+      }
       final service = _ref.read(cameraScanServiceProvider);
       await service.initialize();
       _cameraController = service.controller;
@@ -146,15 +152,30 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
     }
   }
 
+  /// Releases the camera when the app goes to background; captured pages and
+  /// session state survive so scanning continues seamlessly on resume.
+  Future<void> suspendCamera() async {
+    _tracker?.stop();
+    _cameraController = null;
+    state = state.copyWith(cameraReady: false);
+    await _ref.read(cameraScanServiceProvider).dispose();
+  }
+
+  Future<void> resumeCamera() async {
+    if (state.step != ScanStep.capture) return; // re-inits via backToCapture
+    if (_cameraController != null) return;
+    await initializeCamera();
+  }
+
   Future<void> _startFrameAnalysis() async {
     final service = _ref.read(cameraScanServiceProvider);
     final camera = service.activeCamera;
     if (camera == null) return;
 
+    // Frames keep flowing while the captured-page preview is up — the tracker
+    // uses them to notice the page being swapped and auto-advance the session.
     await service.startImageStream((image) {
-      if (_frameAnalysisBusy ||
-          state.step != ScanStep.capture ||
-          state.waitingForNextPage) {
+      if (_frameAnalysisBusy || state.step != ScanStep.capture) {
         return;
       }
       _frameAnalysisBusy = true;
@@ -190,10 +211,15 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
   void updateDetection() {
     final tracker = _tracker;
     if (tracker == null) return;
+    // Batch scanning: once the tracker unlocks (previous page left the frame
+    // or a new one appeared), dismiss the captured-page preview automatically
+    // so multi-page scans never need a tap between pages.
+    final autoAdvance = state.waitingForNextPage && !tracker.isAutoCaptureLocked;
     state = state.copyWith(
       quad: tracker.quad,
       phase: tracker.phase,
       confidence: tracker.confidence,
+      clearEditingPageIndex: autoAdvance,
     );
   }
 
@@ -377,8 +403,13 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
       step: ScanStep.capture,
       clearEditingPageIndex: true,
     );
-    _tracker?.start();
-    _startFrameAnalysis();
+    if (_cameraController == null) {
+      // Camera was released while backgrounded on the review screen.
+      initializeCamera();
+    } else {
+      _tracker?.start();
+      _startFrameAnalysis();
+    }
   }
 
   void removePage(int index) {

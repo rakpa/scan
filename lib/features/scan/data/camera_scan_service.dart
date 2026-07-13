@@ -43,7 +43,9 @@ class CameraScanService {
 
     final controller = CameraController(
       back,
-      ResolutionPreset.high,
+      // veryHigh (1080p) — document text stays legible after perspective
+      // crop; `high` (720p) produced soft, hard-to-read scans.
+      ResolutionPreset.veryHigh,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.yuv420,
     );
