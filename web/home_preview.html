@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanella — Home Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .phone {
+      width: min(390px, 100%);
+      height: min(844px, 92vh);
+      background: #F5F5F7;
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,.45);
+      position: relative;
+    }
+    .header {
+      background: #F9F9FB;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      box-shadow: 4px 4px 8px rgba(0,0,0,.05), -4px -4px 4px #fff;
+    }
+    .icon-btn {
+      width: 44px; height: 44px; border: none; border-radius: 999px;
+      background: #F9F9FB;
+      box-shadow: 4px 4px 8px rgba(0,0,0,.05), -4px -4px 8px #fff;
+      display: grid; place-items: center; color: #424654; font-size: 20px;
+    }
+    .title { flex: 1; text-align: center; font-size: 24px; font-weight: 600; color: #0040A1; }
+    .search-wrap { padding: 8px 16px 0; }
+    .search {
+      height: 52px; background: #F9F9FB; border-radius: 16px; padding: 0 14px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 4px 4px 8px rgba(0,0,0,.05), -4px -4px 8px #fff;
+      color: #737785; font-size: 16px;
+    }
+    .section { padding: 20px 16px 12px; display: flex; justify-content: space-between; align-items: end; }
+    .section h2 { font-size: 20px; font-weight: 600; color: #1A1C1D; }
+    .toggle { display: flex; gap: 8px; }
+    .toggle button {
+      width: 40px; height: 40px; border: none; border-radius: 10px; background: #F9F9FB;
+      box-shadow: 4px 4px 8px rgba(0,0,0,.05), -4px -4px 8px #fff;
+      color: #737785; font-size: 18px;
+    }
+    .toggle button.active { background: rgba(144,239,239,.25); color: #006A6A; }
+    .grid {
+      flex: 1; overflow: auto; padding: 0 16px 100px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start;
+    }
+    .card {
+      background: #fff; border-radius: 12px; padding: 10px;
+      box-shadow: 4px 4px 8px rgba(0,0,0,.05), -4px -4px 8px #fff;
+    }
+    .thumb {
+      aspect-ratio: 3/4; background: #E8E8EA; border-radius: 8px;
+      display: grid; place-items: center; color: #737785; font-size: 32px; margin-bottom: 8px;
+    }
+    .card h3 { font-size: 12px; font-weight: 600; color: #1A1C1D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card p { font-size: 11px; color: #737785; margin-top: 2px; }
+    .empty {
+      grid-column: 1 / -1; text-align: center; padding: 48px 24px; color: #737785;
+    }
+    .fab {
+      position: absolute; right: 24px; bottom: 88px;
+      width: 64px; height: 64px; border-radius: 16px; border: none;
+      background: #0040A1; color: #fff; font-size: 28px;
+      box-shadow: 0 8px 24px rgba(0,64,161,.4); cursor: pointer;
+    }
+    .nav {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+      background: #F9F9FB; border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 12px rgba(0,0,0,.05);
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .nav button {
+      border: none; background: transparent; display: flex; flex-direction: column;
+      align-items: center; gap: 2px; font-size: 12px; color: rgba(66,70,84,.7); padding: 6px 14px;
+    }
+    .nav button.active {
+      color: #0040A1; font-weight: 600;
+      background: rgba(144,239,239,.2); border-radius: 12px;
+    }
+    .note {
+      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.6); font-size: 12px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone" id="app">
+    <header class="header">
+      <button class="icon-btn" aria-label="Menu">☰</button>
+      <div class="title">Scanella</div>
+      <button class="icon-btn" aria-label="Settings">⚙</button>
+    </header>
+    <div class="search-wrap">
+      <div class="search"><span>🔍</span><span>Search Scans...</span><span style="margin-left:auto">🎤</span></div>
+    </div>
+    <div class="section">
+      <h2>Recent Scans</h2>
+      <div class="toggle">
+        <button class="active" title="Grid">▦</button>
+        <button title="List">☰</button>
+      </div>
+    </div>
+    <div class="grid" id="grid">
+      <div class="empty">
+        <div style="font-size:40px;margin-bottom:12px">📄</div>
+        <strong style="display:block;color:#1A1C1D;margin-bottom:6px">No scans yet</strong>
+        Tap the camera button to scan your first document.
+      </div>
+    </div>
+    <button class="fab" id="scanBtn" title="Scan">📷</button>
+    <nav class="nav">
+      <button class="active">📄<span>Scans</span></button>
+      <button>📁<span>Folders</span></button>
+      <button>🔍<span>Search</span></button>
+      <button>👤<span>Profile</span></button>
+    </nav>
+  </div>
+  <p class="note">Browser preview — on your phone this shows your real scanned documents</p>
+  <script>
+  // Demo: tap scan to add a fake scan card (shows how real scans appear)
+  const grid = document.getElementById('grid');
+  const scanBtn = document.getElementById('scanBtn');
+  let count = 0;
+  scanBtn.addEventListener('click', () => {
+    if (count === 0) grid.innerHTML = '';
+    count++;
+    const d = new Date();
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="thumb">📄</div>
+      <h3>Scan ${d.toLocaleString()}</h3>
+      <p>${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · 1 pg</p>`;
+    grid.prepend(card);
+    scanBtn.textContent = '⏳';
+    setTimeout(() => { scanBtn.textContent = '📷'; }, 500);
+  });
+  </script>
+</body>
+</html>

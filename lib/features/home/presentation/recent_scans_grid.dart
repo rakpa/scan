@@ -1,20 +1,21 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../documents/domain/entities.dart';
 import '../../documents/presentation/documents_providers.dart';
+import 'scan_thumbnail.dart';
 
-/// Live grid of captured scans — replaces Stitch HTML demo placeholders.
+/// Live grid/list of captured scans — no Stitch HTML placeholders.
 class RecentScansGrid extends ConsumerWidget {
   const RecentScansGrid({
     super.key,
     required this.onDocumentTap,
+    this.listView = false,
   });
 
   final ValueChanged<String> onDocumentTap;
+  final bool listView;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,7 +57,7 @@ class RecentScansGrid extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Tap the camera button below to scan your first document.',
+                    'Tap the camera button to scan your first document.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey.shade600,
@@ -64,6 +65,18 @@ class RecentScansGrid extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+          );
+        }
+
+        if (listView) {
+          return ListView.separated(
+            padding: EdgeInsets.zero,
+            itemCount: summaries.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) => _ScanListTile(
+              summary: summaries[index],
+              onTap: () => onDocumentTap(summaries[index].document.id),
             ),
           );
         }
@@ -99,24 +112,28 @@ class _ScanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('MMM d').format(summary.document.updatedAt);
-    final thumb = summary.thumbnailPath;
+    final meta = '$date · ${summary.pageCount} pg';
 
     return Material(
       color: Colors.white,
-      elevation: 0,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: Ink(
           decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Color(0x0D000000),
+                offset: Offset(4, 4),
                 blurRadius: 8,
-                offset: const Offset(0, 2),
+              ),
+              BoxShadow(
+                color: Colors.white,
+                offset: Offset(-4, -4),
+                blurRadius: 8,
               ),
             ],
           ),
@@ -127,22 +144,7 @@ class _ScanCard extends StatelessWidget {
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: ColoredBox(
-                    color: const Color(0xFFE8E8EA),
-                    child: thumb != null && File(thumb).existsSync()
-                        ? Image.file(
-                            File(thumb),
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : const Center(
-                            child: Icon(
-                              Icons.description_outlined,
-                              size: 36,
-                              color: Color(0xFF737785),
-                            ),
-                          ),
-                  ),
+                  child: ScanThumbnail(path: summary.thumbnailPath),
                 ),
               ),
               const SizedBox(height: 8),
@@ -158,12 +160,83 @@ class _ScanCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '$date · ${summary.pageCount} pg',
+                meta,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 11,
                   color: Color(0xFF737785),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanListTile extends StatelessWidget {
+  const _ScanListTile({required this.summary, required this.onTap});
+
+  final DocumentSummary summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = DateFormat('MMM d').format(summary.document.updatedAt);
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0D000000),
+                offset: Offset(4, 4),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 56,
+                  height: 72,
+                  child: ScanThumbnail(path: summary.thumbnailPath),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary.document.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1C1D),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$date · ${summary.pageCount} pg',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF737785),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

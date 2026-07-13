@@ -6,10 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/stitch_assets.dart';
 import '../../../core/design/stitch_screens.dart';
 import '../../../shared/widgets/stitch/stitch_html_view.dart';
-import '../../home/presentation/recent_scans_grid.dart';
+import '../../home/presentation/dashboard_chrome.dart';
+import '../../home/presentation/home_dashboard_screen.dart';
 import '../../scan/presentation/scan_controller.dart';
 
-/// Main shell — Stitch chrome + native recent scans grid + reliable scan FAB.
+/// App shell — native home dashboard + settings HTML for profile tab.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, this.initialTab = 0});
 
@@ -29,13 +30,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     _tab = widget.initialTab;
   }
 
-  String get _html => switch (_tab) {
-        3 => StitchScreens.settings,
-        _ => StitchScreens.dashboard,
-      };
-
-  bool get _showScansGrid => _tab == 0;
-
   Future<void> _scan() async {
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,8 +41,6 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     setState(() => _scanBusy = true);
     try {
-      // Do not show a full-screen overlay here — it blocks the native scanner
-      // from presenting on iOS when a WebView is underneath.
       final doc = await ref.read(scanControllerProvider.notifier).scanAndSave();
       if (!mounted) return;
       if (doc != null) context.push('/document/${doc.id}');
@@ -61,9 +53,6 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final topInset = MediaQuery.paddingOf(context).top;
-
     ref.listen(scanControllerProvider, (prev, next) {
       if (next is AsyncError) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,130 +61,101 @@ class _MainShellState extends ConsumerState<MainShell> {
       }
     });
 
-    // Grid sits below header + search (~200px from top on most phones).
-    final gridTop = topInset + 196;
-    final gridBottom = 88 + bottomInset;
+    if (_tab == 0) {
+      return HomeDashboardScreen(
+        onScan: _scan,
+        scanBusy: _scanBusy,
+        onTabSelect: _selectTab,
+        selectedTab: _tab,
+      );
+    }
+
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          StitchHtmlView(
-            htmlAsset: _html,
+      body: switch (_tab) {
+        1 => const _ComingSoonTab(
+            icon: Icons.folder_rounded,
+            title: 'Folders',
+            subtitle: 'Organize scans into folders — coming soon.',
+          ),
+        2 => const _ComingSoonTab(
+            icon: Icons.search_rounded,
+            title: 'Search',
+            subtitle: 'Find any scan by name — coming soon.',
+          ),
+        3 => StitchHtmlView(
+            htmlAsset: StitchScreens.settings,
             backgroundColor: const Color(0xFFF5F5F7),
             interactive: false,
-            hideDemoContent: _showScansGrid,
             hotspots: [
               StitchHotspot(
-                left: 0.02,
-                top: 0.88,
-                width: 0.22,
-                height: 0.10,
-                semanticLabel: 'Scans',
-                onTap: () => _selectTab(0),
+                left: 0.05,
+                top: 0.10,
+                width: 0.9,
+                height: 0.12,
+                semanticLabel: 'Subscription',
+                onTap: () => context.push('/paywall'),
               ),
-              StitchHotspot(
-                left: 0.26,
-                top: 0.88,
-                width: 0.22,
-                height: 0.10,
-                semanticLabel: 'Folders',
-                onTap: () => _selectTab(1),
-              ),
-              StitchHotspot(
-                left: 0.50,
-                top: 0.88,
-                width: 0.22,
-                height: 0.10,
-                semanticLabel: 'Search',
-                onTap: () => _selectTab(2),
-              ),
-              StitchHotspot(
-                left: 0.74,
-                top: 0.88,
-                width: 0.22,
-                height: 0.10,
-                semanticLabel: 'Profile',
-                onTap: () => _selectTab(3),
-              ),
-              if (_tab == 0)
-                StitchHotspot(
-                  left: 0.78,
-                  top: 0.01,
-                  width: 0.18,
-                  height: 0.08,
-                  semanticLabel: 'Settings',
-                  onTap: () => _selectTab(3),
-                ),
-              if (_tab == 3)
-                StitchHotspot(
-                  left: 0.05,
-                  top: 0.10,
-                  width: 0.9,
-                  height: 0.12,
-                  semanticLabel: 'Subscription',
-                  onTap: () => context.push('/paywall'),
-                ),
             ],
           ),
-          if (_showScansGrid)
-            Positioned(
-              left: 16,
-              right: 16,
-              top: gridTop,
-              bottom: gridBottom,
-              child: RecentScansGrid(
-                onDocumentTap: (id) => context.push('/document/$id'),
-              ),
-            ),
-          if (_tab <= 1)
-            Positioned(
-              right: 24,
-              bottom: 88 + bottomInset,
-              child: _ScanFab(
+        _ => const SizedBox.shrink(),
+      },
+      floatingActionButton: _tab <= 1
+          ? Padding(
+              padding: EdgeInsets.only(bottom: 64 + bottomInset, right: 8),
+              child: ScanFab(
                 onPressed: _scanBusy ? null : _scan,
                 loading: _scanBusy,
               ),
-            ),
-        ],
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: DashboardBottomNav(
+        selected: _tab,
+        onSelect: _selectTab,
       ),
     );
   }
 }
 
-class _ScanFab extends StatelessWidget {
-  const _ScanFab({required this.onPressed, required this.loading});
+class _ComingSoonTab extends StatelessWidget {
+  const _ComingSoonTab({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
-  final VoidCallback? onPressed;
-  final bool loading;
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 8,
-      shadowColor: const Color(0xFF0040A1).withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(16),
-      color: const Color(0xFF0040A1),
-      child: GestureDetector(
-        onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: 64,
-          height: 64,
-          child: loading
-              ? const Padding(
-                  padding: EdgeInsets.all(18),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(
-                  Icons.add_a_photo_rounded,
-                  color: Colors.white,
-                  size: 30,
-                ),
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 56, color: const Color(0xFF737785)),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF737785)),
+              ),
+            ],
+          ),
         ),
       ),
     );
