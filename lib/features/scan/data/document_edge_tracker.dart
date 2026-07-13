@@ -4,14 +4,13 @@ import 'dart:ui';
 
 import '../domain/scan_mode.dart';
 
-/// Simulates live edge detection with smooth corner animation and stability
-/// tracking for auto-capture.
+/// Tracks document stability from live frame analysis and triggers auto-capture.
 class DocumentEdgeTracker {
   DocumentEdgeTracker({required this.onStable});
 
   static const _cooldown = Duration(milliseconds: 1500);
-  static const _leaveFrameConfidence = 0.5;
-  static const _leaveFrameTicks = 12;
+  static const _leaveFrameConfidence = 0.42;
+  static const _leaveFrameTicks = 10;
   static const _significantChangeThreshold = 0.045;
   static const _duplicateFrameThreshold = 0.022;
 
@@ -26,6 +25,7 @@ class DocumentEdgeTracker {
   final _random = math.Random();
   bool _autoCaptureEnabled = true;
   bool _capturing = false;
+  var _hasFrameFeed = false;
 
   bool _autoCaptureLocked = false;
   DateTime? _lockCooldownUntil;
@@ -65,7 +65,16 @@ class DocumentEdgeTracker {
     if (!enabled) _stability = 0;
   }
 
-  /// Locks auto-capture after a page is saved so the same frame is not shot again.
+  /// Feed live detection from [CameraFrameAnalyzer] (preferred over simulation).
+  void updateFromFrame({
+    required DocumentQuad detected,
+    required double frameConfidence,
+  }) {
+    _hasFrameFeed = true;
+    _quad = _quad.lerp(detected, 0.42);
+    _confidence = frameConfidence;
+  }
+
   void lockAfterCapture(DocumentQuad capturedAt) {
     _capturing = false;
     _stability = 0;
@@ -80,14 +89,13 @@ class DocumentEdgeTracker {
     _phase = ScanDetectionPhase.pageCaptured;
   }
 
-  /// User tapped "Next page" — allow auto-capture once cooldown + conditions pass.
+  void releaseCaptureLock() {
+    _capturing = false;
+  }
+
   void prepareNextPage() {
     _nextPageRequested = true;
     _tryUnlockAutoCapture();
-  }
-
-  void resetAfterCapture() {
-    lockAfterCapture(_quad);
   }
 
   void _clearAutoCaptureLock() {
@@ -154,7 +162,9 @@ class DocumentEdgeTracker {
   void _tick() {
     if (_capturing) return;
 
-    _updateQuadAndConfidence();
+    if (!_hasFrameFeed) {
+      _simulateUntilFrameFeed();
+    }
 
     if (_autoCaptureLocked) {
       _trackDocumentPresence();
@@ -165,15 +175,15 @@ class DocumentEdgeTracker {
       return;
     }
 
-    if (_confidence < 0.55) {
+    if (_confidence < 0.5) {
       _phase = ScanDetectionPhase.looking;
       _stability = 0;
-    } else if (_confidence < 0.82) {
+    } else if (_confidence < 0.78) {
       _phase = ScanDetectionPhase.holdSteady;
-      _stability = 0;
+      _stability = math.max(0, _stability - 0.08);
     } else {
       _phase = ScanDetectionPhase.holdSteady;
-      _stability += 0.05;
+      _stability += 0.06;
       if (_autoCaptureEnabled &&
           _stability >= 1.0 &&
           !_isDuplicateFrame(_quad)) {
@@ -184,8 +194,9 @@ class DocumentEdgeTracker {
     }
   }
 
-  void _updateQuadAndConfidence() {
-    const jitter = 0.004;
+  /// Fallback motion until the first camera frame arrives (simulator / slow start).
+  void _simulateUntilFrameFeed() {
+    const jitter = 0.006;
     final noisyTarget = DocumentQuad(
       topLeft: _target.topLeft +
           Offset(
@@ -209,7 +220,7 @@ class DocumentEdgeTracker {
           ),
     );
 
-    _quad = _quad.lerp(noisyTarget, 0.18);
+    _quad = _quad.lerp(noisyTarget, 0.2);
     final delta = _averageCornerDistance(_quad, _target);
     _confidence = (1 - (delta / 0.08)).clamp(0.0, 1.0);
   }

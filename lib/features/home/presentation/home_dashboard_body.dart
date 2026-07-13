@@ -139,7 +139,11 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
         const Expanded(
           child: Text(
             'Recent',
-            style: HomeTypography.sectionTitle,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: HomeDesign.onSurface,
+            ),
           ),
         ),
         HomeSortChip(

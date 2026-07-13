@@ -100,7 +100,7 @@ class PremiumSearchBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
-              style: TextStyle(fontSize: 16, color: HomeDesign.onSurfaceOf(context), fontFamily: HomeTypography.family),
+              style: HomeTypography.body.copyWith(color: HomeDesign.onSurfaceOf(context)),
               decoration: InputDecoration(
                 hintText: 'Search documents...',
                 hintStyle: HomeTypography.bodyMuted.copyWith(fontSize: 16),
@@ -268,7 +268,11 @@ class PremiumEmptyState extends StatelessWidget {
             const Text(
               'Welcome to Scanella',
               textAlign: TextAlign.center,
-              style: HomeTypography.sectionTitle,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: HomeDesign.onSurface,
+              ),
             ),
             const SizedBox(height: 10),
             Text(

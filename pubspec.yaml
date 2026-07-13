@@ -72,14 +72,6 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: Aptos
-      fonts:
-        - asset: assets/fonts/Aptos-Regular.ttf
-        - asset: assets/fonts/Aptos-Regular.ttf
-          weight: 600
-        - asset: assets/fonts/Aptos-Regular.ttf
-          weight: 700
   assets:
     - assets/stitch/
     - assets/stitch/html/

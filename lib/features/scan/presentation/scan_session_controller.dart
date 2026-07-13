@@ -1,9 +1,13 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../enhance/data/image_processor.dart';
+import '../data/camera_frame_analyzer.dart';
 import '../data/camera_scan_service.dart';
 import '../data/document_edge_tracker.dart';
 import '../data/gallery_import_service.dart';
@@ -109,6 +113,8 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
   final Ref _ref;
   DocumentEdgeTracker? _tracker;
   CameraController? _cameraController;
+  final _frameAnalyzer = CameraFrameAnalyzer();
+  var _frameAnalysisBusy = false;
 
   CameraController? get cameraController => _cameraController;
 
@@ -118,10 +124,39 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
       await service.initialize();
       _cameraController = service.controller;
       _startTracker();
+      await _startFrameAnalysis();
       state = state.copyWith(cameraReady: true, cameraError: null);
     } catch (e) {
       state = state.copyWith(cameraReady: false, cameraError: e.toString());
     }
+  }
+
+  Future<void> _startFrameAnalysis() async {
+    final service = _ref.read(cameraScanServiceProvider);
+    final camera = service.activeCamera;
+    if (camera == null) return;
+
+    await service.startImageStream((image) {
+      if (_frameAnalysisBusy || state.step != ScanStep.capture) return;
+      _frameAnalysisBusy = true;
+      try {
+        final result = _frameAnalyzer.analyzeThrottled(
+          image,
+          state.mode,
+          camera,
+        );
+        if (result != null) {
+          _tracker?.updateFromFrame(
+            detected: result.quad,
+            frameConfidence: result.confidence,
+          );
+        }
+      } catch (e, st) {
+        debugPrint('Frame analysis failed: $e\n$st');
+      } finally {
+        _frameAnalysisBusy = false;
+      }
+    });
   }
 
   void _startTracker() {
@@ -210,6 +245,7 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
         applyingFilter: false,
       );
     } catch (e) {
+      _tracker?.releaseCaptureLock();
       state = state.copyWith(
         isCapturing: false,
         showFlashOverlay: false,
@@ -240,7 +276,6 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
   Future<void> setPageFilter(ScanEnhanceFilter filter) async {
     final raw = state.pendingRawPath;
     if (raw == null || state.applyingFilter) return;
-    if (filter == state.activeFilter) return;
 
     state = state.copyWith(activeFilter: filter, applyingFilter: true);
     try {
@@ -253,7 +288,8 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
         capturedPaths: paths,
         applyingFilter: false,
       );
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Filter apply failed: $e\n$st');
       state = state.copyWith(applyingFilter: false);
     }
   }
@@ -265,7 +301,11 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
           filter: filter.docFilter,
           quality: 92,
         );
-    final outPath = '${sourcePath}_${filter.name}.jpg';
+    final dir = await getTemporaryDirectory();
+    final outPath = p.join(
+      dir.path,
+      'scan_${filter.name}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
     await File(outPath).writeAsBytes(processed);
     return outPath;
   }
@@ -282,11 +322,13 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
     if (state.capturedPaths.isEmpty) return;
     state = state.copyWith(step: ScanStep.review);
     _tracker?.stop();
+    _ref.read(cameraScanServiceProvider).stopImageStream();
   }
 
   void backToCapture() {
     state = state.copyWith(step: ScanStep.capture);
     _tracker?.start();
+    _startFrameAnalysis();
   }
 
   void removePage(int index) {

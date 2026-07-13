@@ -12,6 +12,7 @@ import '../domain/scan_mode.dart';
 import 'scan_controller.dart';
 import 'scan_design_tokens.dart';
 import 'scan_session_controller.dart';
+import 'widgets/scan_captured_preview.dart';
 import 'widgets/scan_filter_strip.dart';
 import 'widgets/scan_bottom_controls.dart';
 import 'widgets/scan_edge_overlay.dart';
@@ -202,6 +203,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     }
 
     final quad = session.quad ?? DocumentQuad.forMode(session.mode);
+    final previewPath = session.capturedPaths.isNotEmpty
+        ? session.capturedPaths.last
+        : null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -232,7 +236,20 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
               builder: (context, _) => ScanEdgeOverlay(
                 quad: quad,
                 confidence: session.confidence,
-                pulse: _pulseController.value,
+                pulse: session.waitingForNextPage ? 0 : _pulseController.value,
+              ),
+            ),
+
+          if (session.waitingForNextPage && previewPath != null)
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.55),
+                child: Center(
+                  child: ScanCapturedPreview(
+                    imagePath: previewPath,
+                    processing: session.applyingFilter,
+                  ),
+                ),
               ),
             ),
 

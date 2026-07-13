@@ -80,8 +80,9 @@ Uint8List _runProcessing(_ProcessArgs args) {
 
   switch (DocFilter.values[args.filterIndex]) {
     case DocFilter.original:
+      break;
     case DocFilter.color:
-      // Original = untouched. Color = base image with manual adjustments only.
+      image = img.adjustColor(image, saturation: 1.08, contrast: 1.04);
       break;
     case DocFilter.auto:
       // Contrast-stretch the histogram, then a gentle pop.
