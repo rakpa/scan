@@ -12,7 +12,7 @@ final documentScannerServiceProvider = Provider<DocumentScannerService>((ref) {
 
 /// Drives the "scan a new document" flow and exposes loading/error state to the
 /// UI (e.g. to show a spinner or a snackbar).
-class ScanController extends AutoDisposeAsyncNotifier<void> {
+class ScanController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {
     // No initial work; idle until [scanAndSave] is invoked.
@@ -60,4 +60,4 @@ class ScanController extends AutoDisposeAsyncNotifier<void> {
 }
 
 final scanControllerProvider =
-    AutoDisposeAsyncNotifierProvider<ScanController, void>(ScanController.new);
+    AsyncNotifierProvider<ScanController, void>(ScanController.new);

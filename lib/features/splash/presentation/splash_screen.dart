@@ -8,7 +8,7 @@ import '../../../core/design/stitch_assets.dart';
 import '../../../core/design/stitch_screens.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
-/// Splash — native layout (no WebView), preloads home, fades to main.
+/// Splash — centered native layout (no WebView), preloads home, fades to main.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -76,44 +76,66 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             CurvedAnimation(parent: _fadeOut, curve: Curves.easeOut),
           ),
           child: SafeArea(
-            child: Column(
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                const Spacer(flex: 3),
-                Image.asset(
-                  StitchAssets.splashIcon,
-                  width: 88,
-                  height: 88,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.document_scanner_outlined,
-                    size: 88,
-                    color: Colors.white,
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            StitchAssets.splashIcon,
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.document_scanner_outlined,
+                              size: 96,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Scanella',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Scan · Organize · Share',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Scanella',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 32,
+                  child: Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Scan · Organize · Share',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.75),
-                      ),
-                ),
-                const Spacer(flex: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 32),
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ),

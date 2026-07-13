@@ -18,6 +18,7 @@ class StitchHtmlView extends StatefulWidget {
     this.interactive = true,
     this.backgroundColor = Colors.black,
     this.onLoaded,
+    this.hideDemoContent = false,
   });
 
   final String htmlAsset;
@@ -26,6 +27,7 @@ class StitchHtmlView extends StatefulWidget {
   final bool interactive;
   final Color backgroundColor;
   final VoidCallback? onLoaded;
+  final bool hideDemoContent;
 
   @override
   State<StitchHtmlView> createState() => _StitchHtmlViewState();
@@ -66,6 +68,7 @@ class _StitchHtmlViewState extends State<StitchHtmlView> {
       raw,
       topInset: topInset,
       bottomInset: bottomInset,
+      hideDemoContent: widget.hideDemoContent,
     );
     if (!mounted || _loadKey == null) return;
 

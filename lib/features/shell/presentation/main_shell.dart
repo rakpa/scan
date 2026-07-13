@@ -6,9 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/stitch_assets.dart';
 import '../../../core/design/stitch_screens.dart';
 import '../../../shared/widgets/stitch/stitch_html_view.dart';
+import '../../home/presentation/recent_scans_grid.dart';
 import '../../scan/presentation/scan_controller.dart';
 
-/// Main shell — Stitch Dashboard HTML with native scan FAB + bottom-nav hotspots.
+/// Main shell — Stitch chrome + native recent scans grid + reliable scan FAB.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, this.initialTab = 0});
 
@@ -20,7 +21,7 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   late int _tab;
-  var _htmlReady = false;
+  var _scanBusy = false;
 
   @override
   void initState() {
@@ -33,6 +34,8 @@ class _MainShellState extends ConsumerState<MainShell> {
         _ => StitchScreens.dashboard,
       };
 
+  bool get _showScansGrid => _tab == 0;
+
   Future<void> _scan() async {
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -40,24 +43,26 @@ class _MainShellState extends ConsumerState<MainShell> {
       );
       return;
     }
+    if (_scanBusy) return;
 
-    final doc = await ref.read(scanControllerProvider.notifier).scanAndSave();
-    if (!mounted) return;
-    if (doc != null) context.push('/document/${doc.id}');
+    setState(() => _scanBusy = true);
+    try {
+      // Do not show a full-screen overlay here — it blocks the native scanner
+      // from presenting on iOS when a WebView is underneath.
+      final doc = await ref.read(scanControllerProvider.notifier).scanAndSave();
+      if (!mounted) return;
+      if (doc != null) context.push('/document/${doc.id}');
+    } finally {
+      if (mounted) setState(() => _scanBusy = false);
+    }
   }
 
-  void _selectTab(int i) {
-    setState(() {
-      _tab = i;
-      _htmlReady = false;
-    });
-  }
+  void _selectTab(int i) => setState(() => _tab = i);
 
   @override
   Widget build(BuildContext context) {
-    final scanState = ref.watch(scanControllerProvider);
-    final scanning = scanState.isLoading;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     ref.listen(scanControllerProvider, (prev, next) {
       if (next is AsyncError) {
@@ -66,6 +71,10 @@ class _MainShellState extends ConsumerState<MainShell> {
         );
       }
     });
+
+    // Grid sits below header + search (~200px from top on most phones).
+    final gridTop = topInset + 196;
+    final gridBottom = 88 + bottomInset;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F7),
@@ -76,9 +85,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             htmlAsset: _html,
             backgroundColor: const Color(0xFFF5F5F7),
             interactive: false,
-            onLoaded: () {
-              if (mounted) setState(() => _htmlReady = true);
-            },
+            hideDemoContent: _showScansGrid,
             hotspots: [
               StitchHotspot(
                 left: 0.02,
@@ -132,30 +139,23 @@ class _MainShellState extends ConsumerState<MainShell> {
                 ),
             ],
           ),
-          if (_htmlReady && _tab <= 1)
+          if (_showScansGrid)
+            Positioned(
+              left: 16,
+              right: 16,
+              top: gridTop,
+              bottom: gridBottom,
+              child: RecentScansGrid(
+                onDocumentTap: (id) => context.push('/document/$id'),
+              ),
+            ),
+          if (_tab <= 1)
             Positioned(
               right: 24,
               bottom: 88 + bottomInset,
               child: _ScanFab(
-                onPressed: scanning ? null : _scan,
-                loading: scanning,
-              ),
-            ),
-          if (scanning)
-            ColoredBox(
-              color: Colors.black.withValues(alpha: 0.35),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      'Opening scanner…',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
+                onPressed: _scanBusy ? null : _scan,
+                loading: _scanBusy,
               ),
             ),
         ],
@@ -177,9 +177,9 @@ class _ScanFab extends StatelessWidget {
       shadowColor: const Color(0xFF0040A1).withValues(alpha: 0.35),
       borderRadius: BorderRadius.circular(16),
       color: const Color(0xFF0040A1),
-      child: InkWell(
+      child: GestureDetector(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
+        behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: 64,
           height: 64,

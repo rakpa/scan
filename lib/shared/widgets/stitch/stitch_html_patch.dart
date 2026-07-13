@@ -8,6 +8,7 @@ abstract final class StitchHtmlPatch {
     String html, {
     required double topInset,
     required double bottomInset,
+    bool hideDemoContent = false,
   }) {
     var out = html;
 
@@ -59,6 +60,20 @@ abstract final class StitchHtmlPatch {
   nav[class*="md:hidden"], nav.fixed.bottom-0 {
     display: flex !important;
   }
+  ${hideDemoContent ? '''
+  /* Demo cards + HTML FAB — replaced by native Flutter widgets. */
+  main .grid.grid-cols-2 {
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  button.fixed.bottom-24,
+  button[class*="bottom-24"][class*="right-"] {
+    display: none !important;
+  }
+  ''' : ''}
 </style>''';
 
     if (out.contains('</head>')) {
