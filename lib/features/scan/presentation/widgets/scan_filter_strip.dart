@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../domain/scan_enhance_filter.dart';
+import '../../domain/scan_enhance_filter.dart';
 import '../scan_design_tokens.dart';
 
 /// Horizontal filter chips shown after a page is locked in frame.
