@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../domain/entities.dart';
-import 'documents_providers.dart';
+import '../../documents/domain/entities.dart';
+import '../../documents/presentation/documents_providers.dart';
 
 /// Live grid of captured scans — replaces Stitch HTML demo placeholders.
 class RecentScansGrid extends ConsumerWidget {
