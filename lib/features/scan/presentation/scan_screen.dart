@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../domain/scan_enhance_filter.dart';
 import '../domain/scan_mode.dart';
 import 'scan_controller.dart';
 import 'scan_design_tokens.dart';
@@ -281,7 +282,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 ScanFilterStrip(
                   selected: session.activeFilter,
                   processing: session.applyingFilter,
-                  onSelected: (filter) =>
+                  onSelected: (ScanEnhanceFilter filter) =>
                       ref.read(scanSessionProvider.notifier).setPageFilter(filter),
                 ),
               ],
