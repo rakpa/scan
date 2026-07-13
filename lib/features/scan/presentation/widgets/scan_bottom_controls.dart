@@ -9,10 +9,12 @@ class ScanCaptureButton extends StatefulWidget {
     super.key,
     required this.onPressed,
     this.loading = false,
+    this.retake = false,
   });
 
   final VoidCallback onPressed;
   final bool loading;
+  final bool retake;
 
   @override
   State<ScanCaptureButton> createState() => _ScanCaptureButtonState();
@@ -63,10 +65,16 @@ class _ScanCaptureButtonState extends State<ScanCaptureButton> {
                 : Container(
                     width: 58,
                     height: 58,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: widget.retake ? ScanDesign.primary.withValues(alpha: 0.15) : Colors.white,
                       shape: BoxShape.circle,
+                      border: widget.retake
+                          ? Border.all(color: ScanDesign.primary, width: 2)
+                          : null,
                     ),
+                    child: widget.retake
+                        ? const Icon(Icons.refresh_rounded, color: ScanDesign.primary)
+                        : null,
                   ),
           ),
         ),
@@ -86,6 +94,7 @@ class ScanBottomControls extends StatelessWidget {
     this.waitingForNextPage = false,
     this.onNextPage,
     this.hintText = 'Align document inside the frame',
+    this.retakeMode = false,
   });
 
   final int pageCount;
@@ -96,6 +105,7 @@ class ScanBottomControls extends StatelessWidget {
   final bool waitingForNextPage;
   final VoidCallback? onNextPage;
   final String hintText;
+  final bool retakeMode;
 
   @override
   Widget build(BuildContext context) {
@@ -144,10 +154,12 @@ class ScanBottomControls extends StatelessWidget {
                   icon: Icons.photo_library_outlined,
                   label: 'Gallery',
                   onTap: onGallery,
+                  enabled: !waitingForNextPage,
                 ),
                 ScanCaptureButton(
                   onPressed: onCapture,
                   loading: capturing,
+                  retake: retakeMode,
                 ),
                 _SideButton(
                   icon: Icons.check_rounded,

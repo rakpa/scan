@@ -15,14 +15,12 @@ class HomeDashboardBody extends ConsumerStatefulWidget {
   const HomeDashboardBody({
     super.key,
     required this.onOpenMenu,
-    required this.onOpenProfile,
     required this.onFolderTap,
     required this.onScan,
     required this.onImport,
   });
 
   final VoidCallback onOpenMenu;
-  final VoidCallback onOpenProfile;
   final ValueChanged<String> onFolderTap;
   final VoidCallback onScan;
   final VoidCallback onImport;
@@ -116,7 +114,7 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
             icon: const Icon(Icons.menu_rounded, color: HomeDesign.onSurface),
             tooltip: 'Menu',
           ),
-          const Expanded(
+          Expanded(
             child: Text(
               'Scanella',
               textAlign: TextAlign.center,
@@ -124,7 +122,11 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
             ),
           ),
           IconButton(
-            onPressed: widget.onOpenProfile,
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notifications coming soon.')),
+              );
+            },
             icon: const Icon(Icons.notifications_none_rounded, color: HomeDesign.onSurface),
             tooltip: 'Notifications',
           ),

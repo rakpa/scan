@@ -163,7 +163,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     return switch (_navIndex) {
       0 => HomeDashboardBody(
           onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
-          onOpenProfile: () => context.push('/settings'),
           onFolderTap: (id) =>
               ref.read(activeFolderIdProvider.notifier).state = id,
           onScan: _scan,
@@ -177,7 +176,6 @@ class _MainShellState extends ConsumerState<MainShell> {
       4 => const SettingsScreen(embedded: true),
       _ => HomeDashboardBody(
           onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
-          onOpenProfile: () => context.push('/settings'),
           onFolderTap: (id) =>
               ref.read(activeFolderIdProvider.notifier).state = id,
           onScan: _scan,

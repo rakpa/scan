@@ -111,7 +111,11 @@ class PremiumSearchBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Voice search coming soon.')),
+              );
+            },
             icon: Icon(Icons.mic_rounded, color: HomeDesign.secondary, size: 20),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

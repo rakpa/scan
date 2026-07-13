@@ -65,15 +65,27 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _capture() async {
     try {
       await HapticFeedback.lightImpact();
       await ref.read(scanSessionProvider.notifier).capture(manual: true);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Capture failed: $e')),
-      );
+      _showError('Capture failed: $e');
+    }
+  }
+
+  Future<void> _setFilter(ScanEnhanceFilter filter) async {
+    try {
+      await ref.read(scanSessionProvider.notifier).setPageFilter(filter);
+    } catch (e) {
+      _showError('Filter failed: $e');
     }
   }
 
@@ -91,6 +103,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         if (!mounted) return;
         if (ok) {
           context.pop(true);
+        } else {
+          _showError('Could not save pages. Please try again.');
         }
       } else {
         final doc = await controller.saveFromPaths(
@@ -101,6 +115,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         if (doc != null) {
           context.pop();
           context.push('/document/${doc.id}');
+        } else {
+          _showError('Could not save document. Please try again.');
         }
       }
     } finally {
@@ -203,9 +219,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     }
 
     final quad = session.quad ?? DocumentQuad.forMode(session.mode);
-    final previewPath = session.capturedPaths.isNotEmpty
-        ? session.capturedPaths.last
-        : null;
+    final previewPath = session.editingPreviewPath;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -294,28 +308,29 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 phase: session.phase,
                 confidence: session.confidence,
               ),
-              if (session.waitingForNextPage && session.pendingRawPath != null) ...[
+              if (session.waitingForNextPage && previewPath != null) ...[
                 const SizedBox(height: 12),
                 ScanFilterStrip(
                   selected: session.activeFilter,
                   processing: session.applyingFilter,
-                  onSelected: (ScanEnhanceFilter filter) =>
-                      ref.read(scanSessionProvider.notifier).setPageFilter(filter),
+                  onSelected: _setFilter,
                 ),
               ],
-              const SizedBox(height: 16),
-              ScanModeSelector(
-                selected: session.mode,
-                onSelected: (m) =>
-                    ref.read(scanSessionProvider.notifier).setMode(m),
-              ),
+              if (!session.waitingForNextPage) ...[
+                const SizedBox(height: 16),
+                ScanModeSelector(
+                  selected: session.mode,
+                  onSelected: (m) =>
+                      ref.read(scanSessionProvider.notifier).setMode(m),
+                ),
+              ],
               const SizedBox(height: 12),
               ScanBottomControls(
                 pageCount: session.pageCount,
                 capturing: session.isCapturing,
                 waitingForNextPage: session.waitingForNextPage,
                 hintText: session.waitingForNextPage
-                    ? 'Page captured – move to the next page'
+                    ? 'Adjust this page, then tap Next Page'
                     : 'Align document inside the frame',
                 onNextPage: session.waitingForNextPage
                     ? () {
@@ -323,9 +338,19 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                         ref.read(scanSessionProvider.notifier).prepareNextPage();
                       }
                     : null,
-                onGallery: () =>
-                    ref.read(scanSessionProvider.notifier).importFromGallery(),
+                onGallery: session.waitingForNextPage
+                    ? () {}
+                    : () async {
+                        try {
+                          await ref
+                              .read(scanSessionProvider.notifier)
+                              .importFromGallery();
+                        } catch (e) {
+                          _showError('Import failed: $e');
+                        }
+                      },
                 onCapture: _capture,
+                retakeMode: session.waitingForNextPage,
                 onDone: () => ref.read(scanSessionProvider.notifier).goToReview(),
               ),
             ],

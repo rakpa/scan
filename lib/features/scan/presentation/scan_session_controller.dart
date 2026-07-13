@@ -12,6 +12,7 @@ import '../data/camera_scan_service.dart';
 import '../data/document_edge_tracker.dart';
 import '../data/gallery_import_service.dart';
 import '../data/scan_image_processor.dart';
+import '../domain/captured_scan_page.dart';
 import '../domain/scan_enhance_filter.dart';
 import '../domain/scan_mode.dart';
 
@@ -29,7 +30,8 @@ final scanImageProcessorProvider = Provider((ref) => ScanImageProcessor());
 class ScanSessionState {
   const ScanSessionState({
     this.mode = ScanMode.document,
-    this.capturedPaths = const [],
+    this.pages = const [],
+    this.editingPageIndex,
     this.phase = ScanDetectionPhase.looking,
     this.confidence = 0,
     this.quad,
@@ -40,14 +42,13 @@ class ScanSessionState {
     this.step = ScanStep.capture,
     this.cameraReady = false,
     this.cameraError,
-    this.waitingForNextPage = false,
-    this.pendingRawPath,
-    this.activeFilter = ScanEnhanceFilter.color,
     this.applyingFilter = false,
   });
 
   final ScanMode mode;
-  final List<String> capturedPaths;
+  final List<CapturedScanPage> pages;
+  /// Index of the page currently shown in preview / filter strip.
+  final int? editingPageIndex;
   final ScanDetectionPhase phase;
   final double confidence;
   final DocumentQuad? quad;
@@ -58,16 +59,34 @@ class ScanSessionState {
   final ScanStep step;
   final bool cameraReady;
   final String? cameraError;
-  final bool waitingForNextPage;
-  final String? pendingRawPath;
-  final ScanEnhanceFilter activeFilter;
   final bool applyingFilter;
 
-  int get pageCount => capturedPaths.length;
+  int get pageCount => pages.length;
+
+  bool get waitingForNextPage =>
+      editingPageIndex != null && step == ScanStep.capture;
+
+  CapturedScanPage? get editingPage =>
+      editingPageIndex != null &&
+              editingPageIndex! >= 0 &&
+              editingPageIndex! < pages.length
+          ? pages[editingPageIndex!]
+          : null;
+
+  String? get editingPreviewPath => editingPage?.displayPath;
+
+  ScanEnhanceFilter get activeFilter =>
+      editingPage?.filter ?? ScanEnhanceFilter.color;
+
+  /// Final file paths passed to save — one per page, with that page's filter applied.
+  List<String> get capturedPaths =>
+      pages.map((page) => page.displayPath).toList(growable: false);
 
   ScanSessionState copyWith({
     ScanMode? mode,
-    List<String>? capturedPaths,
+    List<CapturedScanPage>? pages,
+    int? editingPageIndex,
+    bool clearEditingPageIndex = false,
     ScanDetectionPhase? phase,
     double? confidence,
     DocumentQuad? quad,
@@ -78,15 +97,14 @@ class ScanSessionState {
     ScanStep? step,
     bool? cameraReady,
     String? cameraError,
-    bool? waitingForNextPage,
-    String? pendingRawPath,
-    ScanEnhanceFilter? activeFilter,
     bool? applyingFilter,
-    bool clearPendingRaw = false,
   }) {
     return ScanSessionState(
       mode: mode ?? this.mode,
-      capturedPaths: capturedPaths ?? this.capturedPaths,
+      pages: pages ?? this.pages,
+      editingPageIndex: clearEditingPageIndex
+          ? null
+          : (editingPageIndex ?? this.editingPageIndex),
       phase: phase ?? this.phase,
       confidence: confidence ?? this.confidence,
       quad: quad ?? this.quad,
@@ -97,9 +115,6 @@ class ScanSessionState {
       step: step ?? this.step,
       cameraReady: cameraReady ?? this.cameraReady,
       cameraError: cameraError,
-      waitingForNextPage: waitingForNextPage ?? this.waitingForNextPage,
-      pendingRawPath: clearPendingRaw ? null : (pendingRawPath ?? this.pendingRawPath),
-      activeFilter: activeFilter ?? this.activeFilter,
       applyingFilter: applyingFilter ?? this.applyingFilter,
     );
   }
@@ -137,7 +152,11 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
     if (camera == null) return;
 
     await service.startImageStream((image) {
-      if (_frameAnalysisBusy || state.step != ScanStep.capture) return;
+      if (_frameAnalysisBusy ||
+          state.step != ScanStep.capture ||
+          state.waitingForNextPage) {
+        return;
+      }
       _frameAnalysisBusy = true;
       try {
         final result = _frameAnalyzer.analyzeThrottled(
@@ -168,26 +187,18 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
       ..start();
   }
 
-  void bindCamera(CameraController controller) {
-    _cameraController = controller;
-  }
-
   void updateDetection() {
     final tracker = _tracker;
     if (tracker == null) return;
-    final waiting = tracker.waitingForNextPage;
-    final wasWaiting = state.waitingForNextPage;
     state = state.copyWith(
       quad: tracker.quad,
       phase: tracker.phase,
       confidence: tracker.confidence,
-      waitingForNextPage: waiting,
-      clearPendingRaw: wasWaiting && !waiting,
-      activeFilter: wasWaiting && !waiting ? ScanEnhanceFilter.color : null,
     );
   }
 
   void setMode(ScanMode mode) {
+    if (state.waitingForNextPage) return;
     _tracker?.setMode(mode);
     state = state.copyWith(mode: mode);
   }
@@ -206,6 +217,7 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
     if (state.isCapturing) return;
 
     final tracker = _tracker;
+    if (!manual && state.waitingForNextPage) return;
     if (!manual &&
         tracker != null &&
         (tracker.isAutoCaptureLocked || tracker.waitingForNextPage)) {
@@ -232,16 +244,31 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
         ScanEnhanceFilter.color,
       );
 
+      final newPage = CapturedScanPage(
+        rawPath: cropped,
+        displayPath: processed,
+        filter: ScanEnhanceFilter.color,
+      );
+
+      final pages = [...state.pages];
+      int editingIndex;
+
+      if (manual && state.waitingForNextPage && state.editingPageIndex != null) {
+        editingIndex = state.editingPageIndex!;
+        pages[editingIndex] = newPage;
+      } else {
+        pages.add(newPage);
+        editingIndex = pages.length - 1;
+      }
+
       tracker?.lockAfterCapture(quad);
 
       state = state.copyWith(
-        capturedPaths: [...state.capturedPaths, processed],
+        pages: pages,
+        editingPageIndex: editingIndex,
         isCapturing: false,
         showFlashOverlay: false,
         phase: ScanDetectionPhase.pageCaptured,
-        waitingForNextPage: true,
-        pendingRawPath: cropped,
-        activeFilter: ScanEnhanceFilter.color,
         applyingFilter: false,
       );
     } catch (e) {
@@ -250,7 +277,6 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
         isCapturing: false,
         showFlashOverlay: false,
         phase: ScanDetectionPhase.looking,
-        waitingForNextPage: false,
       );
       rethrow;
     }
@@ -265,27 +291,26 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
 
   void prepareNextPage() {
     _tracker?.prepareNextPage();
-    state = state.copyWith(
-      clearPendingRaw: true,
-      activeFilter: ScanEnhanceFilter.color,
-      applyingFilter: false,
-    );
+    state = state.copyWith(clearEditingPageIndex: true);
     updateDetection();
   }
 
   Future<void> setPageFilter(ScanEnhanceFilter filter) async {
-    final raw = state.pendingRawPath;
-    if (raw == null || state.applyingFilter) return;
+    final index = state.editingPageIndex;
+    final editing = state.editingPage;
+    if (index == null || editing == null || state.applyingFilter) return;
+    if (filter == editing.filter) return;
 
-    state = state.copyWith(activeFilter: filter, applyingFilter: true);
+    state = state.copyWith(applyingFilter: true);
     try {
-      final processed = await _applyFilterToFile(raw, filter);
-      final paths = [...state.capturedPaths];
-      if (paths.isNotEmpty) {
-        paths[paths.length - 1] = processed;
-      }
+      final processed = await _applyFilterToFile(editing.rawPath, filter);
+      final pages = [...state.pages];
+      pages[index] = editing.copyWith(
+        displayPath: processed,
+        filter: filter,
+      );
       state = state.copyWith(
-        capturedPaths: paths,
+        pages: pages,
         applyingFilter: false,
       );
     } catch (e, st) {
@@ -294,7 +319,10 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
     }
   }
 
-  Future<String> _applyFilterToFile(String sourcePath, ScanEnhanceFilter filter) async {
+  Future<String> _applyFilterToFile(
+    String sourcePath,
+    ScanEnhanceFilter filter,
+  ) async {
     final bytes = await File(sourcePath).readAsBytes();
     final processed = await _ref.read(imageProcessorProvider).process(
           bytes: bytes,
@@ -311,29 +339,63 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
   }
 
   Future<void> importFromGallery() async {
+    if (state.waitingForNextPage) return;
+
     final paths = await _ref.read(galleryImportServiceProvider).pickPhotos();
     if (paths.isEmpty) return;
+
+    final imported = <CapturedScanPage>[];
+    for (final path in paths) {
+      final processed = await _applyFilterToFile(path, ScanEnhanceFilter.color);
+      imported.add(
+        CapturedScanPage(
+          rawPath: path,
+          displayPath: processed,
+          filter: ScanEnhanceFilter.color,
+        ),
+      );
+    }
+
     state = state.copyWith(
-      capturedPaths: [...state.capturedPaths, ...paths],
+      pages: [...state.pages, ...imported],
+      clearEditingPageIndex: true,
     );
   }
 
   void goToReview() {
-    if (state.capturedPaths.isEmpty) return;
-    state = state.copyWith(step: ScanStep.review);
+    if (state.pages.isEmpty) return;
+    state = state.copyWith(
+      step: ScanStep.review,
+      clearEditingPageIndex: true,
+    );
     _tracker?.stop();
     _ref.read(cameraScanServiceProvider).stopImageStream();
   }
 
   void backToCapture() {
-    state = state.copyWith(step: ScanStep.capture);
+    state = state.copyWith(
+      step: ScanStep.capture,
+      clearEditingPageIndex: true,
+    );
     _tracker?.start();
     _startFrameAnalysis();
   }
 
   void removePage(int index) {
-    final paths = [...state.capturedPaths]..removeAt(index);
-    state = state.copyWith(capturedPaths: paths);
+    final pages = [...state.pages]..removeAt(index);
+    var editingIndex = state.editingPageIndex;
+    if (editingIndex != null) {
+      if (index == editingIndex) {
+        editingIndex = null;
+      } else if (index < editingIndex) {
+        editingIndex -= 1;
+      }
+    }
+    state = state.copyWith(
+      pages: pages,
+      editingPageIndex: editingIndex,
+      clearEditingPageIndex: editingIndex == null,
+    );
   }
 
   @override
