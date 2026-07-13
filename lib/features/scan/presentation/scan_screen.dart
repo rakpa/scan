@@ -40,6 +40,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   Offset? _focusPoint;
   var _saving = false;
 
+  /// The native scanner (ML Kit on Android, VisionKit on iOS) is the primary
+  /// scan flow — platform edge detection is best-in-class. The custom in-app
+  /// camera remains for gallery import and as a fallback when the native
+  /// scanner is unavailable.
+  var _showCustomCamera = false;
+
+  bool get _useNativeScanner => !kIsWeb && !widget.args.openGallery;
+
   @override
   void initState() {
     super.initState();
@@ -51,15 +59,56 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (kIsWeb) return;
-      await ref.read(scanSessionProvider.notifier).initializeCamera();
-      _detectionTimer = Timer.periodic(
-        const Duration(milliseconds: 50),
-        (_) => ref.read(scanSessionProvider.notifier).updateDetection(),
-      );
-      if (widget.args.openGallery && mounted) {
-        await ref.read(scanSessionProvider.notifier).importFromGallery();
+      if (_useNativeScanner) {
+        await _runNativeScanner();
+      } else {
+        await _startCustomCamera();
       }
     });
+  }
+
+  Future<void> _startCustomCamera() async {
+    if (!mounted) return;
+    setState(() => _showCustomCamera = true);
+    await ref.read(scanSessionProvider.notifier).initializeCamera();
+    _detectionTimer ??= Timer.periodic(
+      const Duration(milliseconds: 50),
+      (_) => ref.read(scanSessionProvider.notifier).updateDetection(),
+    );
+    if (widget.args.openGallery && mounted) {
+      await ref.read(scanSessionProvider.notifier).importFromGallery();
+    }
+  }
+
+  /// Runs the native scanner UI and saves its output. Cancelling pops back;
+  /// a failure (e.g. missing Play Services) falls back to the in-app camera.
+  Future<void> _runNativeScanner() async {
+    final controller = ref.read(scanControllerProvider.notifier);
+    final appendId = widget.args.appendDocumentId;
+
+    if (appendId != null) {
+      final ok = await controller.scanAndAppend(appendId);
+      if (!mounted) return;
+      if (ref.read(scanControllerProvider) is AsyncError) {
+        await _startCustomCamera();
+        return;
+      }
+      context.pop(ok ? true : null);
+    } else {
+      final doc =
+          await controller.scanAndSave(folderId: widget.args.folderId);
+      if (!mounted) return;
+      if (ref.read(scanControllerProvider) is AsyncError) {
+        await _startCustomCamera();
+        return;
+      }
+      if (doc != null) {
+        context.pop();
+        context.push('/document/${doc.id}');
+      } else {
+        context.pop(); // user cancelled the native scanner
+      }
+    }
   }
 
   @override
@@ -76,6 +125,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (kIsWeb) return;
+    // The native scanner runs in its own activity/view controller and pauses
+    // this app — only manage the camera when the in-app preview is active.
+    if (!_showCustomCamera) return;
     final notifier = ref.read(scanSessionProvider.notifier);
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
@@ -302,6 +354,26 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
           child: Text(
             'Camera scanning runs on the installed app.',
             style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    // Native-scanner flow: a quiet holding screen while the platform UI is up.
+    if (!_showCustomCamera) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: ScanDesign.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Opening scanner...',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+              ),
+            ],
           ),
         ),
       );
