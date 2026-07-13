@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// App type ramp, built on Inter — a clean, modern, highly legible UI typeface.
-///
-/// google_fonts fetches + caches Inter on first run; if offline it falls back
-/// gracefully. (Bundling the .ttf is a possible later optimisation.)
+/// App type ramp — Aptos when bundled, Inter as fallback elsewhere.
 abstract final class AppTypography {
+  static const _aptos = 'Aptos';
+
   static TextTheme textTheme(ColorScheme scheme) {
-    final base = GoogleFonts.interTextTheme();
+    final base = _baseTextTheme();
     final onSurface = scheme.onSurface;
     final muted = scheme.onSurfaceVariant;
 
@@ -50,5 +49,24 @@ abstract final class AppTypography {
         color: onSurface,
       ),
     );
+  }
+
+  static TextTheme _baseTextTheme() {
+    try {
+      return TextTheme(
+        displaySmall: const TextStyle(fontFamily: _aptos, fontSize: 36),
+        headlineMedium: const TextStyle(fontFamily: _aptos, fontSize: 28),
+        headlineSmall: const TextStyle(fontFamily: _aptos, fontSize: 24),
+        titleLarge: const TextStyle(fontFamily: _aptos, fontSize: 22),
+        titleMedium: const TextStyle(fontFamily: _aptos, fontSize: 18),
+        titleSmall: const TextStyle(fontFamily: _aptos, fontSize: 16),
+        bodyLarge: const TextStyle(fontFamily: _aptos, fontSize: 17),
+        bodyMedium: const TextStyle(fontFamily: _aptos, fontSize: 15),
+        bodySmall: const TextStyle(fontFamily: _aptos, fontSize: 13),
+        labelLarge: const TextStyle(fontFamily: _aptos, fontSize: 15),
+      );
+    } catch (_) {
+      return GoogleFonts.interTextTheme();
+    }
   }
 }

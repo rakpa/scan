@@ -22,6 +22,8 @@ class ScanStatusPill extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final captured = phase == ScanDetectionPhase.pageCaptured;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -32,22 +34,31 @@ class ScanStatusPill extends StatelessWidget {
             color: ScanDesign.glass.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: ScanDesign.guideBlue.withValues(alpha: 0.4),
+              color: captured
+                  ? Colors.greenAccent.withValues(alpha: 0.55)
+                  : ScanDesign.guideBlue.withValues(alpha: 0.4),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 48,
-                child: LinearProgressIndicator(
-                  value: confidence,
-                  minHeight: 3,
-                  backgroundColor: Colors.white24,
-                  color: ScanDesign.guideBlue,
-                  borderRadius: BorderRadius.circular(2),
+              if (captured)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.greenAccent,
+                  size: 18,
+                )
+              else
+                SizedBox(
+                  width: 48,
+                  child: LinearProgressIndicator(
+                    value: confidence,
+                    minHeight: 3,
+                    backgroundColor: Colors.white24,
+                    color: ScanDesign.guideBlue,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
               const SizedBox(width: 10),
               Text(
                 phase.message,

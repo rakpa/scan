@@ -9,6 +9,7 @@ import '../../folders/presentation/folders_providers.dart';
 import '../../../shared/formatting/relative_time.dart';
 import 'feed_actions.dart';
 import 'home_design_tokens.dart';
+import 'home_typography.dart';
 import 'home_premium_widgets.dart';
 import 'recent_feed_item.dart';
 import 'scan_thumbnail.dart';
@@ -341,16 +342,14 @@ class PremiumFolderCard extends StatelessWidget {
                 folder.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                style: HomeTypography.label.copyWith(
                   color: HomeDesign.onSurfaceOf(context),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 updated,
-                style: TextStyle(fontSize: 10, color: HomeDesign.mutedOf(context)),
+                style: HomeTypography.caption.copyWith(color: HomeDesign.mutedOf(context)),
               ),
             ],
           ),
@@ -383,16 +382,15 @@ class PremiumFolderCard extends StatelessWidget {
                     folder.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                    style: HomeTypography.label.copyWith(
+                      fontSize: 16,
                       color: HomeDesign.onSurfaceOf(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     updated,
-                    style: TextStyle(fontSize: 12, color: HomeDesign.mutedOf(context)),
+                    style: HomeTypography.caption.copyWith(color: HomeDesign.mutedOf(context)),
                   ),
                 ],
               ),
@@ -479,16 +477,14 @@ class _PremiumDocumentCardState extends State<PremiumDocumentCard> {
                 widget.summary.document.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                style: HomeTypography.label.copyWith(
                   color: HomeDesign.onSurfaceOf(context),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 '$pages · $date',
-                style: TextStyle(fontSize: 10, color: HomeDesign.mutedOf(context)),
+                style: HomeTypography.caption.copyWith(color: HomeDesign.mutedOf(context)),
               ),
             ],
           ),
@@ -524,16 +520,15 @@ class _PremiumDocumentCardState extends State<PremiumDocumentCard> {
                     widget.summary.document.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                    style: HomeTypography.label.copyWith(
+                      fontSize: 16,
                       color: HomeDesign.onSurfaceOf(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '$pages · $date',
-                    style: TextStyle(fontSize: 11, color: HomeDesign.mutedOf(context)),
+                    style: HomeTypography.caption.copyWith(color: HomeDesign.mutedOf(context)),
                   ),
                 ],
               ),

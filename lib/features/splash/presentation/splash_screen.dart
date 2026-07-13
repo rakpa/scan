@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/app_color_tokens.dart';
 import '../../../core/design/stitch_assets.dart';
-import '../../../core/design/stitch_screens.dart';
 import '../../onboarding/data/onboarding_store.dart';
 
 /// Splash — centered native layout (no WebView), preloads home, fades to main.
@@ -41,10 +40,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _bootstrap() async {
     final started = DateTime.now();
-    final storeFuture = ref.read(onboardingStoreProvider.future);
-    final preloadFuture = rootBundle.loadString(StitchScreens.dashboard);
-    final store = await storeFuture;
-    await preloadFuture;
+    final store = await ref.read(onboardingStoreProvider.future);
 
     final elapsed = DateTime.now().difference(started);
     if (elapsed < _minSplash) {

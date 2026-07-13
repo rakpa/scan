@@ -13,6 +13,7 @@ class ScanImageProcessor {
     required String sourcePath,
     required DocumentQuad quad,
     required ScanMode mode,
+    bool applyModeEnhancement = true,
   }) async {
     if (kIsWeb) return sourcePath;
 
@@ -39,13 +40,15 @@ class ScanImageProcessor {
       height: bottom - top,
     );
 
-    // Light enhancement per scan mode.
-    cropped = switch (mode) {
-      ScanMode.whiteboard => img.adjustColor(cropped, contrast: 1.12, brightness: 1.04),
-      ScanMode.receipt => img.grayscale(cropped),
-      ScanMode.idCard => img.adjustColor(cropped, contrast: 1.08),
-      _ => img.adjustColor(cropped, contrast: 1.05),
-    };
+    // Light enhancement per scan mode (optional — scanner applies filters after capture).
+    if (applyModeEnhancement) {
+      cropped = switch (mode) {
+        ScanMode.whiteboard => img.adjustColor(cropped, contrast: 1.12, brightness: 1.04),
+        ScanMode.receipt => img.grayscale(cropped),
+        ScanMode.idCard => img.adjustColor(cropped, contrast: 1.08),
+        _ => img.adjustColor(cropped, contrast: 1.05),
+      };
+    }
 
     final dir = await getTemporaryDirectory();
     final outPath = p.join(

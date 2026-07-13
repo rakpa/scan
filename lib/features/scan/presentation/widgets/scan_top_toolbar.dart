@@ -48,9 +48,11 @@ class ScanTopToolbar extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      status == ScanDetectionPhase.capturing
-                          ? 'Capturing...'
-                          : 'Scanning...',
+                      switch (status) {
+                        ScanDetectionPhase.capturing => 'Capturing...',
+                        ScanDetectionPhase.pageCaptured => 'Page captured',
+                        _ => 'Scanning...',
+                      },
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: ScanDesign.onDark,

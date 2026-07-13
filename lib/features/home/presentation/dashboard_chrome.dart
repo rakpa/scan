@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'home_design_tokens.dart';
+import 'home_typography.dart';
 import 'home_premium_widgets.dart';
 
 /// Premium 5-slot bottom navigation with elevated scan FAB.
@@ -107,9 +108,8 @@ class _Tab extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              style: HomeTypography.navLabel.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),
             ),

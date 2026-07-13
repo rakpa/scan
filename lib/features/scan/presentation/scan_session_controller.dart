@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../enhance/data/image_processor.dart';
 import '../data/camera_scan_service.dart';
 import '../data/document_edge_tracker.dart';
 import '../data/gallery_import_service.dart';
 import '../data/scan_image_processor.dart';
+import '../domain/scan_enhance_filter.dart';
 import '../domain/scan_mode.dart';
 
 final cameraScanServiceProvider = Provider<CameraScanService>((ref) {
@@ -32,6 +36,10 @@ class ScanSessionState {
     this.step = ScanStep.capture,
     this.cameraReady = false,
     this.cameraError,
+    this.waitingForNextPage = false,
+    this.pendingRawPath,
+    this.activeFilter = ScanEnhanceFilter.color,
+    this.applyingFilter = false,
   });
 
   final ScanMode mode;
@@ -46,6 +54,10 @@ class ScanSessionState {
   final ScanStep step;
   final bool cameraReady;
   final String? cameraError;
+  final bool waitingForNextPage;
+  final String? pendingRawPath;
+  final ScanEnhanceFilter activeFilter;
+  final bool applyingFilter;
 
   int get pageCount => capturedPaths.length;
 
@@ -62,6 +74,11 @@ class ScanSessionState {
     ScanStep? step,
     bool? cameraReady,
     String? cameraError,
+    bool? waitingForNextPage,
+    String? pendingRawPath,
+    ScanEnhanceFilter? activeFilter,
+    bool? applyingFilter,
+    bool clearPendingRaw = false,
   }) {
     return ScanSessionState(
       mode: mode ?? this.mode,
@@ -76,6 +93,10 @@ class ScanSessionState {
       step: step ?? this.step,
       cameraReady: cameraReady ?? this.cameraReady,
       cameraError: cameraError,
+      waitingForNextPage: waitingForNextPage ?? this.waitingForNextPage,
+      pendingRawPath: clearPendingRaw ? null : (pendingRawPath ?? this.pendingRawPath),
+      activeFilter: activeFilter ?? this.activeFilter,
+      applyingFilter: applyingFilter ?? this.applyingFilter,
     );
   }
 }
@@ -119,10 +140,15 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
   void updateDetection() {
     final tracker = _tracker;
     if (tracker == null) return;
+    final waiting = tracker.waitingForNextPage;
+    final wasWaiting = state.waitingForNextPage;
     state = state.copyWith(
       quad: tracker.quad,
       phase: tracker.phase,
       confidence: tracker.confidence,
+      waitingForNextPage: waiting,
+      clearPendingRaw: wasWaiting && !waiting,
+      activeFilter: wasWaiting && !waiting ? ScanEnhanceFilter.color : null,
     );
   }
 
@@ -143,6 +169,14 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
 
   Future<void> capture({bool manual = true}) async {
     if (state.isCapturing) return;
+
+    final tracker = _tracker;
+    if (!manual &&
+        tracker != null &&
+        (tracker.isAutoCaptureLocked || tracker.waitingForNextPage)) {
+      return;
+    }
+
     state = state.copyWith(
       isCapturing: true,
       phase: ScanDetectionPhase.capturing,
@@ -151,32 +185,89 @@ class ScanSessionNotifier extends StateNotifier<ScanSessionState> {
 
     try {
       final rawPath = await _ref.read(cameraScanServiceProvider).capture();
-      final quad = _tracker?.quad ?? DocumentQuad.forMode(state.mode);
-      final processed = await _ref.read(scanImageProcessorProvider).cropToQuad(
+      final quad = tracker?.quad ?? DocumentQuad.forMode(state.mode);
+      final cropped = await _ref.read(scanImageProcessorProvider).cropToQuad(
             sourcePath: rawPath,
             quad: quad,
             mode: state.mode,
+            applyModeEnhancement: false,
           );
+      final processed = await _applyFilterToFile(
+        cropped,
+        ScanEnhanceFilter.color,
+      );
+
+      tracker?.lockAfterCapture(quad);
 
       state = state.copyWith(
         capturedPaths: [...state.capturedPaths, processed],
         isCapturing: false,
         showFlashOverlay: false,
+        phase: ScanDetectionPhase.pageCaptured,
+        waitingForNextPage: true,
+        pendingRawPath: cropped,
+        activeFilter: ScanEnhanceFilter.color,
+        applyingFilter: false,
       );
-      _tracker?.resetAfterCapture();
     } catch (e) {
       state = state.copyWith(
         isCapturing: false,
         showFlashOverlay: false,
         phase: ScanDetectionPhase.looking,
+        waitingForNextPage: false,
       );
       rethrow;
     }
   }
 
   Future<void> _onAutoCapture() async {
-    if (!state.autoCapture || state.isCapturing) return;
+    if (!state.autoCapture || state.isCapturing || state.waitingForNextPage) {
+      return;
+    }
     await capture(manual: false);
+  }
+
+  void prepareNextPage() {
+    _tracker?.prepareNextPage();
+    state = state.copyWith(
+      clearPendingRaw: true,
+      activeFilter: ScanEnhanceFilter.color,
+      applyingFilter: false,
+    );
+    updateDetection();
+  }
+
+  Future<void> setPageFilter(ScanEnhanceFilter filter) async {
+    final raw = state.pendingRawPath;
+    if (raw == null || state.applyingFilter) return;
+    if (filter == state.activeFilter) return;
+
+    state = state.copyWith(activeFilter: filter, applyingFilter: true);
+    try {
+      final processed = await _applyFilterToFile(raw, filter);
+      final paths = [...state.capturedPaths];
+      if (paths.isNotEmpty) {
+        paths[paths.length - 1] = processed;
+      }
+      state = state.copyWith(
+        capturedPaths: paths,
+        applyingFilter: false,
+      );
+    } catch (_) {
+      state = state.copyWith(applyingFilter: false);
+    }
+  }
+
+  Future<String> _applyFilterToFile(String sourcePath, ScanEnhanceFilter filter) async {
+    final bytes = await File(sourcePath).readAsBytes();
+    final processed = await _ref.read(imageProcessorProvider).process(
+          bytes: bytes,
+          filter: filter.docFilter,
+          quality: 92,
+        );
+    final outPath = '${sourcePath}_${filter.name}.jpg';
+    await File(outPath).writeAsBytes(processed);
+    return outPath;
   }
 
   Future<void> importFromGallery() async {

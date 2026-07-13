@@ -62,13 +62,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _next() {
     if (_isLast) {
-      context.go('/paywall');
+      _finishOnboarding();
     } else {
       _controller.nextPage(
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
       );
     }
+  }
+
+  Future<void> _finishOnboarding() async {
+    final store = await ref.read(onboardingStoreProvider.future);
+    await store.markComplete();
+    if (!mounted) return;
+    context.go('/home');
   }
 
   Future<void> _skip() async {

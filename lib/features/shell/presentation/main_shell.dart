@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/app_version_footer.dart';
 import '../../folders/presentation/folder_detail_view.dart';
 import '../../folders/presentation/folders_providers.dart';
 import '../../folders/presentation/folders_tab.dart';
@@ -111,6 +112,10 @@ class _MainShellState extends ConsumerState<MainShell> {
                   Navigator.pop(context);
                   showCreateFolderDialog(context, ref);
                 },
+              ),
+              const Divider(height: 32),
+              const AppVersionFooter(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               ),
             ],
           ),

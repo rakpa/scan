@@ -30,6 +30,7 @@ enum ScanDetectionPhase {
   looking('Looking for document...'),
   holdSteady('Hold steady...'),
   capturing('Capturing...'),
+  pageCaptured('Page captured – move to the next page'),
   idle('');
 
   const ScanDetectionPhase(this.message);

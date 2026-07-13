@@ -11,6 +11,7 @@ import '../domain/scan_mode.dart';
 import 'scan_controller.dart';
 import 'scan_design_tokens.dart';
 import 'scan_session_controller.dart';
+import 'widgets/scan_filter_strip.dart';
 import 'widgets/scan_bottom_controls.dart';
 import 'widgets/scan_edge_overlay.dart';
 import 'widgets/scan_mode_selector.dart';
@@ -275,6 +276,15 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 phase: session.phase,
                 confidence: session.confidence,
               ),
+              if (session.waitingForNextPage && session.pendingRawPath != null) ...[
+                const SizedBox(height: 12),
+                ScanFilterStrip(
+                  selected: session.activeFilter,
+                  processing: session.applyingFilter,
+                  onSelected: (filter) =>
+                      ref.read(scanSessionProvider.notifier).setPageFilter(filter),
+                ),
+              ],
               const SizedBox(height: 16),
               ScanModeSelector(
                 selected: session.mode,
@@ -285,6 +295,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
               ScanBottomControls(
                 pageCount: session.pageCount,
                 capturing: session.isCapturing,
+                waitingForNextPage: session.waitingForNextPage,
+                hintText: session.waitingForNextPage
+                    ? 'Page captured – move to the next page'
+                    : 'Align document inside the frame',
+                onNextPage: session.waitingForNextPage
+                    ? () {
+                        HapticFeedback.selectionClick();
+                        ref.read(scanSessionProvider.notifier).prepareNextPage();
+                      }
+                    : null,
                 onGallery: () =>
                     ref.read(scanSessionProvider.notifier).importFromGallery(),
                 onCapture: _capture,

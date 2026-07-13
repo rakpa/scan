@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'home_design_tokens.dart';
+import 'home_typography.dart';
 
 /// Subtle scale-down on press for premium tactile feedback.
 class ScaleTap extends StatefulWidget {
@@ -99,10 +100,10 @@ class PremiumSearchBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
-              style: TextStyle(fontSize: 15, color: HomeDesign.onSurfaceOf(context)),
+              style: TextStyle(fontSize: 16, color: HomeDesign.onSurfaceOf(context), fontFamily: HomeTypography.family),
               decoration: InputDecoration(
                 hintText: 'Search documents...',
-                hintStyle: TextStyle(fontSize: 15, color: muted, letterSpacing: -0.2),
+                hintStyle: HomeTypography.bodyMuted.copyWith(fontSize: 16),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -163,23 +164,14 @@ class QuickActionCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: HomeDesign.onSurface,
-                letterSpacing: -0.2,
-              ),
+              style: HomeTypography.quickActionTitle,
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: HomeDesign.muted.withValues(alpha: 0.95),
-                height: 1.3,
-              ),
+              style: HomeTypography.quickActionSubtitle,
             ),
           ],
         ),
@@ -276,22 +268,13 @@ class PremiumEmptyState extends StatelessWidget {
             const Text(
               'Welcome to Scanella',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: HomeDesign.onSurface,
-                letterSpacing: -0.4,
-              ),
+              style: HomeTypography.sectionTitle,
             ),
             const SizedBox(height: 10),
             Text(
               'Scan receipts, contracts, IDs and notes.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                color: HomeDesign.muted.withValues(alpha: 0.95),
-                height: 1.45,
-              ),
+              style: HomeTypography.bodyMuted,
             ),
             const SizedBox(height: 28),
             SizedBox(
@@ -361,11 +344,7 @@ class HomeSortChip extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: HomeDesign.onSurface,
-              ),
+              style: HomeTypography.label.copyWith(fontSize: 14),
             ),
             const Icon(Icons.expand_more_rounded, size: 18, color: HomeDesign.muted),
           ],

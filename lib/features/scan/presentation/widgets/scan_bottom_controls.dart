@@ -83,6 +83,9 @@ class ScanBottomControls extends StatelessWidget {
     required this.onCapture,
     required this.onDone,
     this.capturing = false,
+    this.waitingForNextPage = false,
+    this.onNextPage,
+    this.hintText = 'Align document inside the frame',
   });
 
   final int pageCount;
@@ -90,6 +93,9 @@ class ScanBottomControls extends StatelessWidget {
   final VoidCallback onCapture;
   final VoidCallback onDone;
   final bool capturing;
+  final bool waitingForNextPage;
+  final VoidCallback? onNextPage;
+  final String hintText;
 
   @override
   Widget build(BuildContext context) {
@@ -100,13 +106,36 @@ class ScanBottomControls extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Align document inside the frame',
-              style: TextStyle(
+            Text(
+              hintText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 color: ScanDesign.onDarkMuted,
                 fontSize: 13,
               ),
             ),
+            if (waitingForNextPage && onNextPage != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onNextPage,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ScanDesign.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 20),
+                  label: const Text(
+                    'Next Page',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

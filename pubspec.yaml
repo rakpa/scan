@@ -36,6 +36,7 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   share_plus: ^10.1.2
+  package_info_plus: ^8.1.2
 
   # --- Design system / UI ---
   google_fonts: ^6.2.1        # Plus Jakarta Sans
@@ -71,6 +72,14 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Aptos
+      fonts:
+        - asset: assets/fonts/Aptos-Regular.ttf
+        - asset: assets/fonts/Aptos-Regular.ttf
+          weight: 600
+        - asset: assets/fonts/Aptos-Regular.ttf
+          weight: 700
   assets:
     - assets/stitch/
     - assets/stitch/html/

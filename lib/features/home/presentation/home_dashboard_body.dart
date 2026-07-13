@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../folders/presentation/folders_tab.dart';
 import 'home_design_tokens.dart';
+import 'home_typography.dart';
 import 'home_premium_widgets.dart';
 import 'recent_feed_grid.dart';
 import 'recent_feed_item.dart';
@@ -119,12 +120,7 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
             child: Text(
               'Scanella',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: HomeDesign.primary,
-                letterSpacing: -0.3,
-              ),
+              style: HomeTypography.appTitle,
             ),
           ),
           IconButton(
@@ -143,12 +139,7 @@ class _HomeDashboardBodyState extends ConsumerState<HomeDashboardBody> {
         const Expanded(
           child: Text(
             'Recent',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: HomeDesign.onSurface,
-              letterSpacing: -0.3,
-            ),
+            style: HomeTypography.sectionTitle,
           ),
         ),
         HomeSortChip(

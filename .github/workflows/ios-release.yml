@@ -15,7 +15,7 @@ on:
       upload_to_testflight:
         description: 'Also upload to TestFlight'
         type: boolean
-        default: false
+        default: true
 
 jobs:
   release:
@@ -99,3 +99,8 @@ jobs:
           name: ios-ipa
           path: build/ipa/*.ipa
           if-no-files-found: error
+
+      - name: TestFlight upload reminder
+        if: success() && inputs.upload_to_testflight != true
+        run: |
+          echo "::warning::TestFlight upload was SKIPPED. The IPA is only in GitHub Actions artifacts — your phone will still show the previous TestFlight build until you re-run with upload enabled."
