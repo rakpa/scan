@@ -1,70 +1,88 @@
 import 'package:flutter/material.dart';
 
-/// Shared bottom nav + scan FAB used on the home dashboard.
-class DashboardBottomNav extends StatelessWidget {
-  const DashboardBottomNav({
+import 'home_design_tokens.dart';
+import 'home_premium_widgets.dart';
+
+/// Premium 5-slot bottom navigation with elevated scan FAB.
+class PremiumBottomNav extends StatelessWidget {
+  const PremiumBottomNav({
     super.key,
-    required this.selected,
-    required this.onSelect,
+    required this.currentIndex,
+    required this.onTabSelected,
+    required this.onScan,
+    this.scanLoading = false,
   });
 
-  final int selected;
-  final ValueChanged<int> onSelect;
+  /// 0 Home, 1 Collections, 3 AI, 4 Settings (2 = scan action).
+  final int currentIndex;
+  final ValueChanged<int> onTabSelected;
+  final VoidCallback? onScan;
+  final bool scanLoading;
 
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9F9FB),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: HomeDesign.surface,
+        border: Border(top: BorderSide(color: HomeDesign.border.withValues(alpha: 0.6))),
         boxShadow: [
           BoxShadow(
-            color: Color(0x0D000000),
-            offset: Offset(0, -4),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
-      padding: EdgeInsets.only(bottom: bottom),
       child: SizedBox(
-        height: 64,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              icon: Icons.description_rounded,
-              label: 'Scans',
-              selected: selected == 0,
-              onTap: () => onSelect(0),
-            ),
-            _NavItem(
-              icon: Icons.folder_rounded,
-              label: 'Folders',
-              selected: selected == 1,
-              onTap: () => onSelect(1),
-            ),
-            _NavItem(
-              icon: Icons.search_rounded,
-              label: 'Search',
-              selected: selected == 2,
-              onTap: () => onSelect(2),
-            ),
-            _NavItem(
-              icon: Icons.person_rounded,
-              label: 'Profile',
-              selected: selected == 3,
-              onTap: () => onSelect(3),
-            ),
-          ],
+        height: 72 + bottom,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: bottom),
+          child: Row(
+            children: [
+              _Tab(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                selected: currentIndex == 0,
+                onTap: () => onTabSelected(0),
+              ),
+              _Tab(
+                icon: Icons.folder_copy_rounded,
+                label: 'Collections',
+                selected: currentIndex == 1,
+                onTap: () => onTabSelected(1),
+              ),
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: const Offset(0, -18),
+                    child: _PulseScanFab(onPressed: onScan, loading: scanLoading),
+                  ),
+                ),
+              ),
+              _Tab(
+                icon: Icons.auto_awesome_rounded,
+                label: 'AI',
+                selected: currentIndex == 3,
+                onTap: () => onTabSelected(3),
+              ),
+              _Tab(
+                icon: Icons.settings_rounded,
+                label: 'Settings',
+                selected: currentIndex == 4,
+                onTap: () => onTabSelected(4),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({
+class _Tab extends StatelessWidget {
+  const _Tab({
     required this.icon,
     required this.label,
     required this.selected,
@@ -78,36 +96,21 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: selected
-            ? BoxDecoration(
-                color: const Color(0xFF90EFEF).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
+    final color = selected ? HomeDesign.primary : HomeDesign.muted;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: selected
-                  ? const Color(0xFF0040A1)
-                  : const Color(0xFF424654).withValues(alpha: 0.7),
-            ),
-            const SizedBox(height: 2),
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected
-                    ? const Color(0xFF0040A1)
-                    : const Color(0xFF424654).withValues(alpha: 0.7),
+                color: color,
               ),
             ),
           ],
@@ -117,26 +120,59 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class ScanFab extends StatelessWidget {
-  const ScanFab({super.key, required this.onPressed, required this.loading});
+class _PulseScanFab extends StatefulWidget {
+  const _PulseScanFab({required this.onPressed, required this.loading});
 
   final VoidCallback? onPressed;
   final bool loading;
 
   @override
+  State<_PulseScanFab> createState() => _PulseScanFabState();
+}
+
+class _PulseScanFabState extends State<_PulseScanFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 10,
-      shadowColor: const Color(0xFF0040A1).withValues(alpha: 0.4),
-      borderRadius: BorderRadius.circular(16),
-      color: const Color(0xFF0040A1),
-      child: GestureDetector(
-        onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final scale = 1 + (_pulse.value * 0.04);
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: ScaleTap(
+        onTap: widget.onPressed ?? () {},
+        borderRadius: 20,
+        child: Container(
           width: 64,
           height: 64,
-          child: loading
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [HomeDesign.primaryLight, HomeDesign.primary],
+            ),
+            boxShadow: HomeDesign.fabShadow,
+          ),
+          child: widget.loading
               ? const Padding(
                   padding: EdgeInsets.all(18),
                   child: CircularProgressIndicator(
@@ -144,13 +180,13 @@ class ScanFab extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : const Icon(
-                  Icons.add_a_photo_rounded,
-                  color: Colors.white,
-                  size: 30,
-                ),
+              : const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 30),
         ),
       ),
     );
   }
 }
+
+// Backwards-compatible exports used elsewhere.
+typedef DashboardScanBar = PremiumBottomNav;
+typedef ScanFab = _PulseScanFab;

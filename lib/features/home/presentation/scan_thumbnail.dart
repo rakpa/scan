@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'home_design_tokens.dart';
 import 'scan_thumbnail_io.dart'
     if (dart.library.html) 'scan_thumbnail_web.dart' as thumb;
 
@@ -12,8 +13,8 @@ class ScanThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFFE8E8EA),
-      child: thumb.buildScanThumbnail(path),
+      color: HomeDesign.border.withValues(alpha: 0.45),
+      child: thumb.buildScanThumbnail(path, cacheWidth: 320),
     );
   }
 }

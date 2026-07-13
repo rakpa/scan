@@ -18,9 +18,44 @@ class ScanController extends AsyncNotifier<void> {
     // No initial work; idle until [scanAndSave] is invoked.
   }
 
+  /// Persists pre-captured page paths as a new document.
+  Future<ScanDocument?> saveFromPaths(
+    List<String> paths, {
+    String? folderId,
+  }) async {
+    if (paths.isEmpty) return null;
+    state = const AsyncLoading();
+    try {
+      final document = await ref
+          .read(documentRepositoryProvider)
+          .createDocumentFromScans(paths, folderId: folderId);
+      state = const AsyncData(null);
+      return document;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return null;
+    }
+  }
+
+  /// Appends pre-captured page paths to an existing document.
+  Future<bool> saveAppendedPages(String documentId, List<String> paths) async {
+    if (paths.isEmpty) return false;
+    state = const AsyncLoading();
+    try {
+      await ref
+          .read(documentRepositoryProvider)
+          .appendPagesToDocument(documentId, paths);
+      state = const AsyncData(null);
+      return true;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
+
   /// Launches the scanner and, if the user captured pages, persists them as a
   /// new document. Returns the created document, or `null` if cancelled.
-  Future<ScanDocument?> scanAndSave() async {
+  Future<ScanDocument?> scanAndSave({String? folderId}) async {
     state = const AsyncLoading();
     try {
       final paths = await ref.read(documentScannerServiceProvider).scan();
@@ -29,8 +64,9 @@ class ScanController extends AsyncNotifier<void> {
         state = const AsyncData(null);
         return null;
       }
-      final document =
-          await ref.read(documentRepositoryProvider).createDocumentFromScans(paths);
+      final document = await ref
+          .read(documentRepositoryProvider)
+          .createDocumentFromScans(paths, folderId: folderId);
       state = const AsyncData(null);
       return document;
     } catch (error, stackTrace) {

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../documents/domain/entities.dart';
 import '../../documents/presentation/documents_providers.dart';
+import '../../folders/presentation/folders_providers.dart';
 import 'scan_thumbnail.dart';
 
 /// Live grid/list of captured scans — no Stitch HTML placeholders.
@@ -12,14 +13,22 @@ class RecentScansGrid extends ConsumerWidget {
     super.key,
     required this.onDocumentTap,
     this.listView = false,
+    this.folderId,
+    this.emptyTitle = 'No scans yet',
+    this.emptySubtitle = 'Tap the camera button to scan your first document.',
   });
 
   final ValueChanged<String> onDocumentTap;
   final bool listView;
+  final String? folderId;
+  final String emptyTitle;
+  final String emptySubtitle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final documents = ref.watch(documentListProvider);
+    final documents = folderId == null
+        ? ref.watch(documentListProvider)
+        : ref.watch(documentsInFolderProvider(folderId!));
 
     return documents.when(
       loading: () => const Center(
@@ -50,14 +59,14 @@ class RecentScansGrid extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No scans yet',
+                    emptyTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Tap the camera button to scan your first document.',
+                    emptySubtitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey.shade600,

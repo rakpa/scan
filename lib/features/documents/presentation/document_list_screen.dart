@@ -8,6 +8,6 @@ class DocumentListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MainShell(initialTab: 1);
+    return const MainShell();
   }
 }

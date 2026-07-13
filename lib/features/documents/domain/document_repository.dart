@@ -6,6 +6,9 @@ abstract interface class DocumentRepository {
   /// Reactive stream of document summaries for the home list.
   Stream<List<DocumentSummary>> watchDocuments();
 
+  /// Reactive stream of document summaries inside a folder.
+  Stream<List<DocumentSummary>> watchDocumentsInFolder(String folderId);
+
   /// Ordered pages for a document.
   Future<List<ScanPage>> getPages(String documentId);
 
@@ -16,6 +19,7 @@ abstract interface class DocumentRepository {
   Future<ScanDocument> createDocumentFromScans(
     List<String> imagePaths, {
     String? title,
+    String? folderId,
   });
 
   /// Appends scanned images as new pages on an existing document.
@@ -30,4 +34,7 @@ abstract interface class DocumentRepository {
   Future<void> touchDocument(String id);
 
   Future<void> deleteDocument(String id);
+
+  /// Moves a document into a folder, or back to the home library when [folderId] is null.
+  Future<void> moveDocumentToFolder(String id, String? folderId);
 }

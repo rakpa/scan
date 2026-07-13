@@ -3,7 +3,7 @@ description: "A cross-platform document scanner app (Android-first, iOS-ready)."
 publish_to: "none"
 
 # Bump the build number on each store release; rename freely once branding is decided.
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -26,6 +26,8 @@ dependencies:
   # ML Kit Document Scanner (Android, requires Google Play Services) + VisionKit (iOS 13+).
   cunning_document_scanner: ^1.2.3
   permission_handler: ^11.3.1
+  camera: ^0.11.1
+  image_picker: ^1.1.2
 
   # --- Image filters / enhancement (runs in a background isolate) ---
   image: ^4.3.0

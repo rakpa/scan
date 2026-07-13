@@ -9,12 +9,14 @@ class ScanDocument {
     required this.title,
     required this.createdAt,
     required this.updatedAt,
+    this.folderId,
   });
 
   final String id;
   final String title;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? folderId;
 }
 
 /// A single page belonging to a [ScanDocument].

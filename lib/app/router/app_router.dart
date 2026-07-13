@@ -11,6 +11,8 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/paywall/presentation/paywall_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/scan/domain/scan_mode.dart';
+import '../../features/scan/presentation/scan_screen.dart';
 
 /// Application routes.
 abstract final class Routes {
@@ -20,6 +22,7 @@ abstract final class Routes {
   static const home = '/home';
   static const library = '/library';
   static const settings = '/settings';
+  static const scan = '/scan';
   static const document = '/document/:id';
   static const enhance =
       '/document/:id/page/:pageId/enhance';
@@ -63,9 +66,49 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: Routes.scan,
+        pageBuilder: (context, state) {
+          final args = state.extra as ScanRouteArgs? ?? const ScanRouteArgs();
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: ScanScreen(args: args),
+            transitionDuration: const Duration(milliseconds: 350),
+            reverseTransitionDuration: const Duration(milliseconds: 280),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
         path: Routes.document,
-        builder: (context, state) => DocumentDetailScreen(
-          documentId: state.pathParameters['id']!,
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: DocumentDetailScreen(
+            documentId: state.pathParameters['id']!,
+          ),
+          transitionDuration: const Duration(milliseconds: 320),
+          reverseTransitionDuration: const Duration(milliseconds: 260),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.98, end: 1).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                ),
+                child: child,
+              ),
+            );
+          },
         ),
         routes: [
           GoRoute(

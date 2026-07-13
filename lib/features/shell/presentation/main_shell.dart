@@ -3,32 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/design/stitch_assets.dart';
-import '../../../core/design/stitch_screens.dart';
-import '../../../shared/widgets/stitch/stitch_html_view.dart';
+import '../../folders/presentation/folder_detail_view.dart';
+import '../../folders/presentation/folders_providers.dart';
+import '../../folders/presentation/folders_tab.dart';
+import '../../home/presentation/ai_placeholder_body.dart';
+import '../../home/presentation/collections_body.dart';
 import '../../home/presentation/dashboard_chrome.dart';
-import '../../home/presentation/home_dashboard_screen.dart';
-import '../../scan/presentation/scan_controller.dart';
+import '../../home/presentation/home_dashboard_body.dart';
+import '../../home/presentation/home_design_tokens.dart';
+import '../../scan/domain/scan_mode.dart';
+import '../../settings/presentation/settings_screen.dart';
 
-/// App shell — native home dashboard + settings HTML for profile tab.
+/// App shell — premium home, collections, AI, settings + scan FAB.
 class MainShell extends ConsumerStatefulWidget {
-  const MainShell({super.key, this.initialTab = 0});
-
-  final int initialTab;
+  const MainShell({super.key});
 
   @override
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  late int _tab;
-  var _scanBusy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab = widget.initialTab;
-  }
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  var _navIndex = 0;
 
   Future<void> _scan() async {
     if (kIsWeb) {
@@ -37,127 +33,151 @@ class _MainShellState extends ConsumerState<MainShell> {
       );
       return;
     }
-    if (_scanBusy) return;
 
-    setState(() => _scanBusy = true);
-    try {
-      final doc = await ref.read(scanControllerProvider.notifier).scanAndSave();
-      if (!mounted) return;
-      if (doc != null) context.push('/document/${doc.id}');
-    } finally {
-      if (mounted) setState(() => _scanBusy = false);
-    }
-  }
-
-  void _selectTab(int i) => setState(() => _tab = i);
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(scanControllerProvider, (prev, next) {
-      if (next is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: ${next.error}')),
-        );
-      }
-    });
-
-    if (_tab == 0) {
-      return HomeDashboardScreen(
-        onScan: _scan,
-        scanBusy: _scanBusy,
-        onTabSelect: _selectTab,
-        selectedTab: _tab,
-      );
-    }
-
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
-      body: switch (_tab) {
-        1 => const _ComingSoonTab(
-            icon: Icons.folder_rounded,
-            title: 'Folders',
-            subtitle: 'Organize scans into folders — coming soon.',
-          ),
-        2 => const _ComingSoonTab(
-            icon: Icons.search_rounded,
-            title: 'Search',
-            subtitle: 'Find any scan by name — coming soon.',
-          ),
-        3 => StitchHtmlView(
-            htmlAsset: StitchScreens.settings,
-            backgroundColor: const Color(0xFFF5F5F7),
-            interactive: false,
-            hotspots: [
-              StitchHotspot(
-                left: 0.05,
-                top: 0.10,
-                width: 0.9,
-                height: 0.12,
-                semanticLabel: 'Subscription',
-                onTap: () => context.push('/paywall'),
-              ),
-            ],
-          ),
-        _ => const SizedBox.shrink(),
-      },
-      floatingActionButton: _tab <= 1
-          ? Padding(
-              padding: EdgeInsets.only(bottom: 64 + bottomInset, right: 8),
-              child: ScanFab(
-                onPressed: _scanBusy ? null : _scan,
-                loading: _scanBusy,
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: DashboardBottomNav(
-        selected: _tab,
-        onSelect: _selectTab,
-      ),
+    final folderId = ref.read(activeFolderIdProvider);
+    await context.push(
+      '/scan',
+      extra: ScanRouteArgs(folderId: folderId),
     );
   }
-}
 
-class _ComingSoonTab extends StatelessWidget {
-  const _ComingSoonTab({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
+  Future<void> _import() async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo import runs on the installed app.')),
+      );
+      return;
+    }
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
+    final folderId = ref.read(activeFolderIdProvider);
+    await context.push(
+      '/scan',
+      extra: ScanRouteArgs(folderId: folderId, openGallery: true),
+    );
+  }
+
+  void _onNavSelected(int index) {
+    if (index == 2) {
+      _scan();
+      return;
+    }
+    setState(() => _navIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    final activeFolderId = ref.watch(activeFolderIdProvider);
+
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: HomeDesign.canvas,
+      drawer: Drawer(
+        backgroundColor: HomeDesign.surface,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
-              Icon(icon, size: 56, color: const Color(0xFF737785)),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Text(
+                  'Scanella',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: HomeDesign.primary,
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF737785)),
+              ListTile(
+                leading: const Icon(Icons.person_outline_rounded),
+                title: const Text('Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/settings');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _navIndex = 4);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.create_new_folder_outlined),
+                title: const Text('New folder'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showCreateFolderDialog(context, ref);
+                },
               ),
             ],
           ),
         ),
       ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.03, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
+        child: activeFolderId != null
+            ? FolderDetailView(
+                key: ValueKey(activeFolderId),
+                folderId: activeFolderId,
+                onBack: () =>
+                    ref.read(activeFolderIdProvider.notifier).state = null,
+                onDocumentTap: (id) => context.push('/document/$id'),
+                onScan: _scan,
+              )
+            : KeyedSubtree(
+                key: const ValueKey('home-body'),
+                child: _buildBody(),
+              ),
+      ),
+      bottomNavigationBar: activeFolderId != null
+          ? null
+          : PremiumBottomNav(
+              currentIndex: _navIndex,
+              onTabSelected: _onNavSelected,
+              onScan: _scan,
+            ),
     );
+  }
+
+  Widget _buildBody() {
+    return switch (_navIndex) {
+      0 => HomeDashboardBody(
+          onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
+          onOpenProfile: () => context.push('/settings'),
+          onFolderTap: (id) =>
+              ref.read(activeFolderIdProvider.notifier).state = id,
+          onScan: _scan,
+          onImport: _import,
+        ),
+      1 => CollectionsBody(
+          onFolderTap: (id) =>
+              ref.read(activeFolderIdProvider.notifier).state = id,
+        ),
+      3 => const AiPlaceholderBody(),
+      4 => const SettingsScreen(embedded: true),
+      _ => HomeDashboardBody(
+          onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
+          onOpenProfile: () => context.push('/settings'),
+          onFolderTap: (id) =>
+              ref.read(activeFolderIdProvider.notifier).state = id,
+          onScan: _scan,
+          onImport: _import,
+        ),
+    };
   }
 }

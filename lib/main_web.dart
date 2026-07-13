@@ -7,8 +7,9 @@ import 'core/design/stitch_assets.dart';
 import 'core/design/stitch_screens.dart';
 import 'features/documents/domain/entities.dart';
 import 'features/documents/presentation/documents_providers.dart';
-import 'features/home/presentation/home_dashboard_screen.dart';
-import 'features/splash/presentation/splash_screen.dart';
+import 'features/folders/domain/entities.dart';
+import 'features/folders/presentation/folders_providers.dart';
+import 'features/shell/presentation/main_shell.dart';
 import 'shared/widgets/stitch/stitch_html_view.dart';
 
 void main() {
@@ -19,6 +20,9 @@ void main() {
       overrides: [
         documentListProvider.overrideWith(
           (ref) => Stream.value(_demoDocuments),
+        ),
+        folderListProvider.overrideWith(
+          (ref) => Stream.value(_demoFolders),
         ),
       ],
       child: const _WebPreviewApp(),
@@ -49,13 +53,36 @@ final _demoDocuments = [
   ),
 ];
 
+final _demoFolders = [
+  ScanFolder(
+    id: 'folder-receipts',
+    name: 'Receipts',
+    createdAt: DateTime(2024, 10, 20),
+    updatedAt: DateTime(2024, 10, 24),
+    documentCount: 1,
+  ),
+  ScanFolder(
+    id: 'folder-work',
+    name: 'Work',
+    createdAt: DateTime(2024, 9, 15),
+    updatedAt: DateTime(2024, 10, 22),
+    documentCount: 1,
+  ),
+  ScanFolder(
+    id: 'folder-personal',
+    name: 'Personal',
+    createdAt: DateTime(2024, 8, 1),
+    updatedAt: DateTime(2024, 10, 10),
+    documentCount: 0,
+  ),
+];
+
 final _webRouter = GoRouter(
   initialLocation: '/home',
   routes: [
-    GoRoute(path: '/splash', builder: (c, s) => const SplashScreen()),
     GoRoute(
       path: '/home',
-      builder: (c, s) => const _WebHomePreview(),
+      builder: (c, s) => const MainShell(),
     ),
     GoRoute(
       path: '/document/:id',
@@ -63,36 +90,6 @@ final _webRouter = GoRouter(
     ),
   ],
 );
-
-class _WebHomePreview extends StatefulWidget {
-  const _WebHomePreview();
-
-  @override
-  State<_WebHomePreview> createState() => _WebHomePreviewState();
-}
-
-class _WebHomePreviewState extends State<_WebHomePreview> {
-  var _scanBusy = false;
-
-  Future<void> _scan() async {
-    setState(() => _scanBusy = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _scanBusy = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanner opens on the installed app.')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return HomeDashboardScreen(
-      onScan: _scan,
-      scanBusy: _scanBusy,
-      selectedTab: 0,
-    );
-  }
-}
 
 class _WebDocumentDemo extends StatelessWidget {
   const _WebDocumentDemo();

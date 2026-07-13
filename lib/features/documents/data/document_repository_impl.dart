@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -19,12 +20,23 @@ class DocumentRepositoryImpl implements DocumentRepository {
 
   @override
   Stream<List<DocumentSummary>> watchDocuments() {
+    return _watchSummaries(_db.watchDocuments());
+  }
+
+  @override
+  Stream<List<DocumentSummary>> watchDocumentsInFolder(String folderId) {
+    return _watchSummaries(_db.watchDocumentsInFolder(folderId));
+  }
+
+  Stream<List<DocumentSummary>> _watchSummaries(
+    Stream<List<DocumentRow>> rows,
+  ) {
     // Watch documents, then enrich each with its page count + thumbnail.
     // N+1 per emission is acceptable for the MVP list size; revisit with a
     // single aggregate query if libraries grow large.
-    return _db.watchDocuments().asyncMap((rows) async {
+    return rows.asyncMap((rowList) async {
       final summaries = <DocumentSummary>[];
-      for (final row in rows) {
+      for (final row in rowList) {
         final pages = await _db.getPages(row.id);
         summaries.add(
           DocumentSummary(
@@ -48,6 +60,7 @@ class DocumentRepositoryImpl implements DocumentRepository {
   Future<ScanDocument> createDocumentFromScans(
     List<String> imagePaths, {
     String? title,
+    String? folderId,
   }) async {
     final now = DateTime.now();
     final docId = _uuid.v4();
@@ -76,17 +89,23 @@ class DocumentRepositoryImpl implements DocumentRepository {
       DocumentsCompanion.insert(
         id: docId,
         title: docTitle,
+        folderId: Value(folderId),
         createdAt: now,
         updatedAt: now,
       ),
       pageCompanions,
     );
 
+    if (folderId != null) {
+      await _db.touchFolder(folderId);
+    }
+
     return ScanDocument(
       id: docId,
       title: docTitle,
       createdAt: now,
       updatedAt: now,
+      folderId: folderId,
     );
   }
 
@@ -136,6 +155,14 @@ class DocumentRepositoryImpl implements DocumentRepository {
     await _storage.deleteDocumentFiles(id);
   }
 
+  @override
+  Future<void> moveDocumentToFolder(String id, String? folderId) async {
+    await _db.moveDocumentToFolder(id, folderId);
+    if (folderId != null) {
+      await _db.touchFolder(folderId);
+    }
+  }
+
   // --- Mapping helpers -----------------------------------------------------
 
   ScanDocument _toEntity(DocumentRow row) => ScanDocument(
@@ -143,6 +170,7 @@ class DocumentRepositoryImpl implements DocumentRepository {
         title: row.title,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        folderId: row.folderId,
       );
 
   ScanPage _toPageEntity(PageRow row) => ScanPage(

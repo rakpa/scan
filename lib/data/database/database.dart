@@ -1,17 +1,28 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import 'database_connection.dart';
 
 part 'database.g.dart';
+
+/// User-created folder for organizing scans.
+@DataClassName('FolderRow')
+class Folders extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().withLength(min: 1, max: 120)();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
 
 /// A scanned document = a logical grouping of one or more pages.
 @DataClassName('DocumentRow')
 class Documents extends Table {
   TextColumn get id => text()();
   TextColumn get title => text().withLength(min: 1, max: 200)();
+  TextColumn get folderId =>
+      text().nullable().references(Folders, #id, onDelete: KeyAction.setNull)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -34,16 +45,22 @@ class Pages extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Documents, Pages])
+@DriftDatabase(tables: [Folders, Documents, Pages])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase([QueryExecutor? executor]) : super(executor ?? openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(folders);
+            await m.addColumn(documents, documents.folderId);
+          }
+        },
         beforeOpen: (details) async {
           // Required for the ON DELETE CASCADE on Pages to fire.
           await customStatement('PRAGMA foreign_keys = ON');
@@ -57,6 +74,71 @@ class AppDatabase extends _$AppDatabase {
     return (select(documents)
           ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
         .watch();
+  }
+
+  /// Streams documents inside a folder (newest first).
+  Stream<List<DocumentRow>> watchDocumentsInFolder(String folderId) {
+    return (select(documents)
+          ..where((d) => d.folderId.equals(folderId))
+          ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
+        .watch();
+  }
+
+  /// Streams all folders (newest first).
+  Stream<List<FolderRow>> watchFolders() {
+    return (select(folders)
+          ..orderBy([(f) => OrderingTerm.desc(f.updatedAt)]))
+        .watch();
+  }
+
+  Future<FolderRow?> getFolder(String id) {
+    return (select(folders)..where((f) => f.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<int> countDocumentsInFolder(String folderId) async {
+    final rows = await (select(documents)
+          ..where((d) => d.folderId.equals(folderId)))
+        .get();
+    return rows.length;
+  }
+
+  Future<List<String>> getDocumentIdsInFolder(String folderId) async {
+    final rows = await (select(documents)
+          ..where((d) => d.folderId.equals(folderId)))
+        .get();
+    return rows.map((row) => row.id).toList();
+  }
+
+  Future<void> insertFolder(FoldersCompanion folder) {
+    return into(folders).insert(folder);
+  }
+
+  Future<void> renameFolder(String id, String name) {
+    return (update(folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(
+        name: Value(name),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> touchFolder(String id) {
+    return (update(folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(updatedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> deleteFolder(String id) {
+    return (delete(folders)..where((f) => f.id.equals(id))).go();
+  }
+
+  Future<void> moveDocumentToFolder(String id, String? folderId) {
+    return (update(documents)..where((d) => d.id.equals(id))).write(
+      DocumentsCompanion(
+        folderId: Value(folderId),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
   }
 
   /// Ordered pages for a single document.
@@ -102,14 +184,4 @@ class AppDatabase extends _$AppDatabase {
     // Pages are removed via ON DELETE CASCADE.
     return (delete(documents)..where((d) => d.id.equals(id))).go();
   }
-}
-
-/// Opens the SQLite file lazily inside the app documents directory and runs the
-/// heavy work on a background isolate.
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'doc_scanner.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
 }
