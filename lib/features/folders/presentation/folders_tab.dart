@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../scan/domain/scan_mode.dart';
 import 'folder_detail_view.dart';
 import 'folder_list_view.dart';
 import '../domain/entities.dart';
@@ -26,6 +28,18 @@ class FoldersTab extends ConsumerWidget {
       folderId: folderId,
       onBack: () => ref.read(activeFolderIdProvider.notifier).state = null,
       onDocumentTap: (id) => context.push('/document/$id'),
+      onScan: () {
+        if (kIsWeb) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Scanning runs on the installed app.')),
+          );
+          return;
+        }
+        context.push(
+          '/scan',
+          extra: ScanRouteArgs(folderId: folderId),
+        );
+      },
     );
   }
 }
