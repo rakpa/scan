@@ -40,13 +40,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   Offset? _focusPoint;
   var _saving = false;
 
-  /// The native scanner (ML Kit on Android, VisionKit on iOS) is the primary
-  /// scan flow — platform edge detection is best-in-class. The custom in-app
-  /// camera remains for gallery import and as a fallback when the native
-  /// scanner is unavailable.
+  /// In-app camera with live edge guides is the default scan experience.
+  /// The native ML Kit / VisionKit scanner stays available from the ⋮ menu.
   var _showCustomCamera = false;
 
-  bool get _useNativeScanner => !kIsWeb && !widget.args.openGallery;
+  bool get _useNativeScanner =>
+      !kIsWeb && widget.args.preferNativeScanner && !widget.args.openGallery;
 
   @override
   void initState() {

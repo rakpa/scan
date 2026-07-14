@@ -85,9 +85,14 @@ class ScanRouteArgs {
     this.folderId,
     this.appendDocumentId,
     this.openGallery = false,
+    this.preferNativeScanner = false,
   });
 
   final String? folderId;
   final String? appendDocumentId;
   final bool openGallery;
+
+  /// When true, opens the platform document scanner (ML Kit / VisionKit)
+  /// instead of the in-app camera with live edge detection.
+  final bool preferNativeScanner;
 }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
@@ -19,8 +20,9 @@ class FrameDetectionResult {
   final double confidence;
 }
 
-/// Detects a document quad from live camera YUV frames using the pure-Dart
-/// [DocumentQuadDetector] (no ML dependency — works on device + simulator).
+/// Detects a document quad from live camera frames (YUV or BGRA) using the
+/// pure-Dart [DocumentQuadDetector] (no ML dependency — works on device +
+/// simulator).
 class CameraFrameAnalyzer {
   CameraFrameAnalyzer();
 
@@ -92,18 +94,61 @@ class CameraFrameAnalyzer {
   _LumGrid? _luminanceGrid(CameraImage image) {
     if (image.planes.isEmpty) return null;
 
-    final plane = image.planes.first; // Y (luminance) on Android and iOS.
     final srcW = image.width;
     final srcH = image.height;
     if (srcW < 16 || srcH < 16) return null;
 
     const targetW = _analysisWidth;
     final targetH = (targetW * srcH / srcW).round().clamp(48, 220);
+    final grid = Uint8List(targetW * targetH);
 
+    switch (image.format.group) {
+      case ImageFormatGroup.bgra8888:
+        _fillLumFromBgra(
+          image.planes.first,
+          srcW: srcW,
+          srcH: srcH,
+          targetW: targetW,
+          targetH: targetH,
+          grid: grid,
+        );
+      case ImageFormatGroup.yuv420:
+      case ImageFormatGroup.nv21:
+        _fillLumFromYPlane(
+          image.planes.first,
+          srcW: srcW,
+          srcH: srcH,
+          targetW: targetW,
+          targetH: targetH,
+          grid: grid,
+        );
+      default:
+        // Unknown format — best-effort Y-plane read (Android JPEG preview, etc.).
+        _fillLumFromYPlane(
+          image.planes.first,
+          srcW: srcW,
+          srcH: srcH,
+          targetW: targetW,
+          targetH: targetH,
+          grid: grid,
+        );
+    }
+
+    return _LumGrid(bytes: grid, width: targetW, height: targetH);
+  }
+
+  /// Reads the Y (luminance) plane from a YUV420/NV21 buffer.
+  void _fillLumFromYPlane(
+    Plane plane, {
+    required int srcW,
+    required int srcH,
+    required int targetW,
+    required int targetH,
+    required Uint8List grid,
+  }) {
     final bytes = plane.bytes;
     final rowStride = plane.bytesPerRow;
     final pixelStride = plane.bytesPerPixel ?? 1;
-    final grid = Uint8List(targetW * targetH);
 
     for (var y = 0; y < targetH; y++) {
       final srcY = (y * srcH / targetH).floor().clamp(0, srcH - 1);
@@ -117,7 +162,40 @@ class CameraFrameAnalyzer {
         }
       }
     }
-    return _LumGrid(bytes: grid, width: targetW, height: targetH);
+  }
+
+  /// Converts a BGRA8888 camera buffer into a downscaled grayscale grid.
+  ///
+  /// iOS image streams often arrive as BGRA even when YUV is requested; treating
+  /// those bytes as a Y plane produced garbage and edge detection never locked on.
+  void _fillLumFromBgra(
+    Plane plane, {
+    required int srcW,
+    required int srcH,
+    required int targetW,
+    required int targetH,
+    required Uint8List grid,
+  }) {
+    final bytes = plane.bytes;
+    final rowStride = plane.bytesPerRow;
+    const bpp = 4;
+
+    for (var y = 0; y < targetH; y++) {
+      final srcY = (y * srcH / targetH).floor().clamp(0, srcH - 1);
+      final rowBase = srcY * rowStride;
+      final dstBase = y * targetW;
+      for (var x = 0; x < targetW; x++) {
+        final srcX = (x * srcW / targetW).floor().clamp(0, srcW - 1);
+        final index = rowBase + srcX * bpp;
+        if (index + 2 < bytes.length) {
+          final b = bytes[index];
+          final g = bytes[index + 1];
+          final r = bytes[index + 2];
+          // ITU-R BT.601 luma in fixed-point: 0.299R + 0.587G + 0.114B
+          grid[dstBase + x] = (r * 77 + g * 150 + b * 29) >> 8;
+        }
+      }
+    }
   }
 }
 

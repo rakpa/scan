@@ -47,7 +47,11 @@ class CameraScanService {
       // crop; `high` (720p) produced soft, hard-to-read scans.
       ResolutionPreset.veryHigh,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420,
+      // iOS image streams are most reliable as BGRA; Android uses YUV420.
+      // CameraFrameAnalyzer handles both for live edge detection.
+      imageFormatGroup: defaultTargetPlatform == TargetPlatform.iOS
+          ? ImageFormatGroup.bgra8888
+          : ImageFormatGroup.yuv420,
     );
     await controller.initialize();
     await controller.setFocusMode(FocusMode.auto);
